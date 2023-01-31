@@ -21,6 +21,7 @@ pub enum NodeType {
     Quantifier(Quantifier),
     Operator(Operator),
     Variable(u32),
+    Comprehension,
     EmptySet,
 }
 
@@ -54,6 +55,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
     let items = create_parse_items(tokens);
     let items = parse_empty_set(items);
     let items = parse_variables(items);
+    let items = parse_relations(items)?;
     todo!("{:?}", items)
 }
 
@@ -125,4 +127,50 @@ fn parse_variables(items: Vec<ParseItem>) -> Vec<ParseItem> {
             i => i,
         })
         .collect()
+}
+
+fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
+    'outer: loop {
+        for i in 0..items.len() {
+            if let ParseItem::Token(Token::Rel(rel)) = &items[i] {
+                if i == 0 || i + 1 == items.len() {
+                    bail!("Found binary relation '{}' at edge of the formula", rel);
+                }
+                if let (ParseItem::SyntaxNode(l), ParseItem::SyntaxNode(r)) =
+                    (&items[i - 1], &items[i + 1])
+                {
+                    if !(matches!(
+                        l.entry,
+                        NodeType::EmptySet | NodeType::Comprehension | NodeType::Variable(_)
+                    ) && matches!(
+                        r.entry,
+                        NodeType::EmptySet | NodeType::Comprehension | NodeType::Variable(_)
+                    )) {
+                        bail!(
+                            "Invalid relata {:?} and {:?} for relation '{}'",
+                            l.entry,
+                            r.entry,
+                            rel
+                        );
+                    }
+                    let node = match rel.as_str() {
+                        "=" => SyntaxNode {
+                            entry: NodeType::Relation(Relation::Equality),
+                            children: vec![l.to_owned(), r.to_owned()],
+                        },
+                        "∈" | "\\epsilon" => SyntaxNode {
+                            entry: NodeType::Relation(Relation::Element),
+                            children: vec![l.to_owned(), r.to_owned()],
+                        },
+                        x => unimplemented!("Relation token '{}' not implemented in parser", x),
+                    };
+                    items.remove(i + 1);
+                    items.remove(i - 1);
+                    items[i - 1] = ParseItem::SyntaxNode(node);
+                    continue 'outer;
+                }
+            }
+        }
+        break Ok(items);
+    }
 }
