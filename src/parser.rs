@@ -57,15 +57,15 @@ pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
 }
 
 fn create_parse_items(tokens: Vec<Token>) -> Vec<ParseItem> {
-    tokens.into_iter().map(|x| ParseItem::Token(x)).collect()
+    tokens.into_iter().map(|t| ParseItem::Token(t)).collect()
 }
 
 fn parse_empty_set(items: Vec<ParseItem>) -> Vec<ParseItem> {
     items
         .into_iter()
-        .map(|x| match x {
-            ParseItem::Token(Token::Const(y)) => {
-                if ["0", "∅", "\\emptyset"].contains(&y.as_str()) {
+        .map(|i| match i {
+            ParseItem::Token(Token::Const(c)) => {
+                if ["0", "∅", "\\emptyset"].contains(&c.as_str()) {
                     ParseItem::SyntaxNode(SyntaxNode {
                         entry: NodeType::EmptySet,
                         children: vec![],
@@ -74,7 +74,7 @@ fn parse_empty_set(items: Vec<ParseItem>) -> Vec<ParseItem> {
                     unreachable!()
                 }
             }
-            z => z,
+            i => i,
         })
         .collect()
 }
