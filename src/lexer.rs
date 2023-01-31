@@ -11,16 +11,15 @@ pub enum Token {
     Const(String),
 }
 
-const PAREN: &'static [&'static str] = &["(", ")", "{", "}"];
 const CONN: &'static [&'static str] = &[
     "¬",
     "∧",
     "∨",
     "→",
     "↔",
-    "~",
-    "&",
-    "|",
+    "!",
+    "&&",
+    "||",
     "->",
     "<->",
     "\\lnot",
@@ -29,6 +28,7 @@ const CONN: &'static [&'static str] = &[
     "\\rightarrow",
     "\\leftrightarrow",
 ];
+const PAREN: &'static [&'static str] = &["(", ")", "{", "}", "|"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str] = &["=", "∈", "\\epsilon"];
 const OP: &'static [&'static str] = &["Pot"];
@@ -38,12 +38,6 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
     input = input.split_whitespace().collect();
     'outer: while !input.is_empty() {
-        for x in PAREN {
-            if input.starts_with(x) {
-                result.push(Token::Paren(input.drain(..x.len()).collect()));
-                continue 'outer;
-            }
-        }
         for x in CONN {
             if input.starts_with(x) {
                 result.push(Token::Conn(input.drain(..x.len()).collect()));
@@ -53,6 +47,13 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
         for x in QUAN {
             if input.starts_with(x) {
                 result.push(Token::Quan(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
+
+        for x in PAREN {
+            if input.starts_with(x) {
+                result.push(Token::Paren(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
