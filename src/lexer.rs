@@ -12,8 +12,8 @@ pub enum Token {
     Const(String),
 }
 
-const PAREN: &'static [&'static str; 4] = &["(", ")", "{", "}"];
-const CONN: &'static [&'static str; 15] = &[
+const PAREN: &'static [&'static str] = &["(", ")", "{", "}"];
+const CONN: &'static [&'static str] = &[
     "¬",
     "∧",
     "∨",
@@ -30,10 +30,10 @@ const CONN: &'static [&'static str; 15] = &[
     "\\rightarrow",
     "\\leftrightarrow",
 ];
-const QUAN: &'static [&'static str; 4] = &["∀", "∃", "\\forall", "\\exists"];
-const REL: &'static [&'static str; 3] = &["=", "∈", "\\epsilon"];
-const OP: &'static [&'static str; 1] = &["Pot"];
-const CONST: &'static [&'static str; 3] = &["0", "∅", "\\emptyset"];
+const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
+const REL: &'static [&'static str] = &["=", "∈", "\\epsilon"];
+const OP: &'static [&'static str] = &["Pot"];
+const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
