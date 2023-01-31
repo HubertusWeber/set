@@ -7,6 +7,7 @@ pub enum Token {
     Rel(String),
     Conn(String),
     Quan(String),
+    Op(String),
     Var(String),
 }
 
@@ -30,32 +31,39 @@ const CONN: &'static [&'static str; 15] = &[
 ];
 const QUAN: &'static [&'static str; 4] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str; 3] = &["=", "∈", "\\epsilon"];
+const OP: &'static [&'static str; 1] = &["Pot"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
     input = input.split_whitespace().collect();
     'outer: while !input.is_empty() {
-        for p in PAREN {
-            if input.starts_with(p) {
-                result.push(Token::Paren(input.drain(..p.len()).collect()));
+        for x in PAREN {
+            if input.starts_with(x) {
+                result.push(Token::Paren(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
-        for p in CONN {
-            if input.starts_with(p) {
-                result.push(Token::Conn(input.drain(..p.len()).collect()));
+        for x in CONN {
+            if input.starts_with(x) {
+                result.push(Token::Conn(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
-        for p in QUAN {
-            if input.starts_with(p) {
-                result.push(Token::Quan(input.drain(..p.len()).collect()));
+        for x in QUAN {
+            if input.starts_with(x) {
+                result.push(Token::Quan(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
-        for p in REL {
-            if input.starts_with(p) {
-                result.push(Token::Rel(input.drain(..p.len()).collect()));
+        for x in REL {
+            if input.starts_with(x) {
+                result.push(Token::Rel(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
+        for x in OP {
+            if input.starts_with(x) {
+                result.push(Token::Op(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
