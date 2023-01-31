@@ -56,7 +56,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
     let items = parse_empty_set(items);
     let items = parse_variables(items);
     let items = parse_relations(items)?;
-    todo!("{:?}", items)
+    todo!("{:?}", max_depth(&items))
 }
 
 fn create_parse_items(tokens: Vec<Token>) -> Vec<ParseItem> {
@@ -172,5 +172,31 @@ fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
             }
         }
         break Ok(items);
+    }
+}
+
+fn max_depth(items: &Vec<ParseItem>) -> Result<usize> {
+    let mut parens = Vec::<char>::new();
+    let mut max_depth = 0;
+    for i in items {
+        if let ParseItem::Token(Token::Paren(p)) = i {
+            if ["(", "{"].contains(&p.as_str()) {
+                parens.push(p.chars().next().unwrap());
+                max_depth = std::cmp::max(max_depth, parens.len());
+            } else if p == ")" {
+                if parens.pop() != Some('(') {
+                    bail!("Unexpected token ')'");
+                };
+            } else if p == "}" {
+                if parens.pop() != Some('{') {
+                    bail!("Unexpected token '}}'");
+                };
+            }
+        }
+    }
+    if let Some(p) = parens.pop() {
+        bail!("Unclosed parenthesis '{}'", p)
+    } else {
+        Ok(max_depth)
     }
 }
