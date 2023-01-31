@@ -1,5 +1,4 @@
-use anyhow::bail;
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 #[derive(Debug, Clone)]
 pub enum Token {
