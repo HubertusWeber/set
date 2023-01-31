@@ -1,5 +1,6 @@
 use crate::lexer::Token;
 use anyhow::{bail, Result};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 enum ParseItem {
@@ -52,7 +53,7 @@ pub enum Operator {
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
     let items = create_parse_items(tokens);
     let items = parse_empty_set(items);
-
+    let items = parse_variables(items);
     todo!("{:?}", items)
 }
 
@@ -74,6 +75,53 @@ fn parse_empty_set(items: Vec<ParseItem>) -> Vec<ParseItem> {
                     unreachable!()
                 }
             }
+            i => i,
+        })
+        .collect()
+}
+
+fn parse_variables(items: Vec<ParseItem>) -> Vec<ParseItem> {
+    let used_indices = std::cell::RefCell::new(HashSet::<u32>::new());
+    let mut index_map = HashMap::<String, u32>::new();
+    items
+        .into_iter()
+        .map(|i| match i {
+            ParseItem::Token(Token::Var(v)) => {
+                if v.starts_with(&v) && v.len() > 1 {
+                    let index = v[1..].parse().unwrap();
+                    used_indices.borrow_mut().insert(index);
+                    ParseItem::SyntaxNode(SyntaxNode {
+                        entry: NodeType::Variable(index),
+                        children: vec![],
+                    })
+                } else {
+                    ParseItem::Token(Token::Var(v))
+                }
+            }
+            i => i,
+        })
+        .collect::<Vec<ParseItem>>()
+        .into_iter()
+        .map(|i| match i {
+            ParseItem::Token(Token::Var(v)) => ParseItem::SyntaxNode(SyntaxNode {
+                entry: NodeType::Variable(if index_map.contains_key(&v) {
+                    *index_map.get(&v).unwrap()
+                } else {
+                    let index = (0..)
+                        .into_iter()
+                        .find_map(|n| {
+                            if used_indices.borrow_mut().insert(n) {
+                                Some(n)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap();
+                    index_map.insert(v, index);
+                    index
+                }),
+                children: vec![],
+            }),
             i => i,
         })
         .collect()
