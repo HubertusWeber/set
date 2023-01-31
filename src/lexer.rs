@@ -10,7 +10,7 @@ pub enum Token {
     Var(String),
 }
 
-const PAREN: &'static [&'static str; 2] = &["(", ")"];
+const PAREN: &'static [&'static str; 4] = &["(", ")", "{", "}"];
 const CONN: &'static [&'static str; 15] = &[
     "¬",
     "∧",
