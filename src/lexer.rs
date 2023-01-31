@@ -4,9 +4,9 @@ use anyhow::Result;
 #[derive(Debug, Clone)]
 pub enum Token {
     Paren(String),
+    Rel(String),
     Conn(String),
     Quan(String),
-    Pred(String),
     Var(String),
 }
 
@@ -29,7 +29,7 @@ const CONN: &'static [&'static str; 15] = &[
     "\\leftrightarrow",
 ];
 const QUAN: &'static [&'static str; 4] = &["∀", "∃", "\\forall", "\\exists"];
-const PRED: &'static [&'static str; 2] = &["∈", "\\epsilon"];
+const REL: &'static [&'static str; 3] = &["=", "∈", "\\epsilon"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
@@ -53,9 +53,9 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
                 continue 'outer;
             }
         }
-        for p in PRED {
+        for p in REL {
             if input.starts_with(p) {
-                result.push(Token::Pred(input.drain(..p.len()).collect()));
+                result.push(Token::Rel(input.drain(..p.len()).collect()));
                 continue 'outer;
             }
         }
