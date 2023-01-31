@@ -9,6 +9,7 @@ pub enum Token {
     Quan(String),
     Op(String),
     Var(String),
+    Const(String),
 }
 
 const PAREN: &'static [&'static str; 4] = &["(", ")", "{", "}"];
@@ -32,6 +33,7 @@ const CONN: &'static [&'static str; 15] = &[
 const QUAN: &'static [&'static str; 4] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str; 3] = &["=", "∈", "\\epsilon"];
 const OP: &'static [&'static str; 1] = &["Pot"];
+const CONST: &'static [&'static str; 3] = &["0", "∅", "\\emptyset"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
@@ -64,6 +66,12 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
         for x in OP {
             if input.starts_with(x) {
                 result.push(Token::Op(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
+        for x in CONST {
+            if input.starts_with(x) {
+                result.push(Token::Const(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
