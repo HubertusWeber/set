@@ -1,5 +1,5 @@
 use crate::lexer::Token;
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -181,13 +181,14 @@ fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
     }
 }
 
-fn parse_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+fn parse_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    ensure!(pos < items.len(), "Unexpected end of input");
     match &items[pos] {
         ParseItem::SyntaxNode(..) => Ok(items),
         ParseItem::Token(Token::Quan(..)) => parse_quan_at(items, pos),
         ParseItem::Token(Token::Paren(p)) => match p.as_str() {
             "(" => parse_conn_at(items, pos),
-            "{" => parse_comp_at(items, pos),
+            "{" => parse_relations(parse_comp_at(items, pos)?),
             x => bail!("Unexpected token '{}'", x),
         },
         ParseItem::Token(Token::Conn(c)) => match c.as_str() {
@@ -199,15 +200,39 @@ fn parse_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
 }
 
 fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    ensure!(pos + 2 < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos + 2)?;
+    let formula = items.remove(pos + 2);
+    let var = items.remove(pos + 1);
+    if let (ParseItem::SyntaxNode(formula), ParseItem::SyntaxNode(var)) = (formula, var) {
+        if !matches!(var.entry, NodeType::Variable(..)) {
+            bail!("Expected variable after quantifier");
+        }
+        if let ParseItem::Token(Token::Quan(q)) = &items[pos] {
+            let quan = SyntaxNode {
+                entry: match q.as_str() {
+                    "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
+                    "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
+                    x => unimplemented!("Quantifier token '{}' not implemented in parser", x),
+                },
+                children: vec![var, formula],
+            };
+            items[pos] = ParseItem::SyntaxNode(quan);
+            Ok(items)
+        } else {
+            unreachable!("Called parse_quan_at with a position not containing a qunatifier token")
+        }
+    } else {
+        unreachable!("Found unparsed token(s) after quantifier")
+    }
+}
+fn parse_conn_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
     todo!()
 }
-fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+fn parse_neg_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
     todo!()
 }
-fn parse_neg_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    todo!()
-}
-fn parse_comp_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+fn parse_comp_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
     todo!()
 }
 
