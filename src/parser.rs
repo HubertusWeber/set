@@ -51,6 +51,12 @@ pub enum Operator {
     PowerSet,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct Depth {
+    val: usize,
+    pos: usize,
+}
+
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
     let items = create_parse_items(tokens);
     let items = parse_empty_set(items);
@@ -175,14 +181,47 @@ fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
     }
 }
 
-fn max_depth(items: &Vec<ParseItem>) -> Result<usize> {
+fn parse_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    match &items[pos] {
+        ParseItem::SyntaxNode(..) => Ok(items),
+        ParseItem::Token(Token::Quan(..)) => parse_quan_at(items, pos),
+        ParseItem::Token(Token::Paren(p)) => match p.as_str() {
+            "(" => parse_conn_at(items, pos),
+            "{" => parse_comp_at(items, pos),
+            x => bail!("Unexpected token '{}'", x),
+        },
+        ParseItem::Token(Token::Conn(c)) => match c.as_str() {
+            "¬" | "!" | "\\lnot" => parse_neg_at(items, pos),
+            x => bail!("Unexpected token '{}'", x),
+        },
+        ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
+    }
+}
+
+fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    todo!()
+}
+fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    todo!()
+}
+fn parse_neg_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    todo!()
+}
+fn parse_comp_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    todo!()
+}
+
+fn max_depth(items: &Vec<ParseItem>) -> Result<Depth> {
     let mut parens = Vec::<char>::new();
-    let mut max_depth = 0;
-    for i in items {
+    let mut max_depth = Depth { val: 0, pos: 0 };
+    for (pos, i) in items.iter().enumerate() {
         if let ParseItem::Token(Token::Paren(p)) = i {
             if ["(", "{"].contains(&p.as_str()) {
                 parens.push(p.chars().next().unwrap());
-                max_depth = std::cmp::max(max_depth, parens.len());
+                if parens.len() > max_depth.val {
+                    max_depth.val = parens.len();
+                    max_depth.pos = pos;
+                }
             } else if p == ")" {
                 if parens.pop() != Some('(') {
                     bail!("Unexpected token ')'");
