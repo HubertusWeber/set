@@ -152,7 +152,7 @@ impl Parsable for Vec<ParseItem> {
         match &self[pos] {
             ParseItem::SyntaxNode(..) => Ok(self),
             ParseItem::Token(Token::Quan(..)) => self.parse_quan_at(pos),
-            ParseItem::Token(Token::Paren(p)) => match p.as_str() {
+            ParseItem::Token(Token::Brack(p)) => match p.as_str() {
                 "(" => self.parse_conn_at(pos),
                 "{" => self.parse_comp_at(pos),
                 x => bail!("Unexpected token '{}'", x),
@@ -223,14 +223,14 @@ impl Parsable for Vec<ParseItem> {
     }
 
     fn parse_conn_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Paren(p)) if p == "("));
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(p)) if p == "("));
         ensure!(pos < self.len(), "Unexpected end of input");
         self = self.parse_at(pos)?;
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == ")"),
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == ")"),
             "Missing token ')'"
         );
         if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
@@ -283,13 +283,13 @@ impl Parsable for Vec<ParseItem> {
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(&self[pos + 1],ParseItem::Token(Token::Paren(p)) if p == "|"),
+            matches!(&self[pos + 1],ParseItem::Token(Token::Brack(p)) if p == "|"),
             "Missing token '|' in set comprehension"
         );
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == "}"),
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == "}"),
             "Mising token '}}'"
         );
         if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
@@ -308,13 +308,13 @@ impl Parsable for Vec<ParseItem> {
         assert!(matches!(self[pos], ParseItem::Token(Token::Op(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 1), ParseItem::Token(Token::Paren(p)) if p == "("),
+            matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(p)) if p == "("),
             "Unexpected token, expected '('"
         );
         self = self.parse_at(pos + 1)?;
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 2), ParseItem::Token(Token::Paren(p)) if p == ""),
+            matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ""),
             "Unexpected token, expected ')'"
         );
         if let (ParseItem::Token(Token::Op(op)), ParseItem::SyntaxNode(operand)) =
@@ -337,7 +337,7 @@ fn max_depth(items: &Vec<ParseItem>) -> Result<Depth> {
     let mut parens = Vec::<char>::new();
     let mut max_depth = Depth { val: 0, pos: 0 };
     for (pos, i) in items.iter().enumerate() {
-        if let ParseItem::Token(Token::Paren(p)) = i {
+        if let ParseItem::Token(Token::Brack(p)) = i {
             if p == "(" || p == "{" {
                 parens.push(p.chars().next().unwrap());
                 if parens.len() > max_depth.val {

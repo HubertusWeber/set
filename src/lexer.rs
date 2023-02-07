@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 
 #[derive(Debug, Clone)]
 pub enum Token {
-    Paren(String),
+    Brack(String),
     Rel(String),
     Conn(String),
     Quan(String),
@@ -28,7 +28,7 @@ const CONN: &'static [&'static str] = &[
     "\\rightarrow",
     "\\leftrightarrow",
 ];
-const PAREN: &'static [&'static str] = &["(", ")", "{", "}", "|"];
+const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str] = &["=", "∈", "\\epsilon"];
 const OP: &'static [&'static str] = &["Pot"];
@@ -51,9 +51,9 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
             }
         }
 
-        for x in PAREN {
+        for x in BRACK {
             if input.starts_with(x) {
-                result.push(Token::Paren(input.drain(..x.len()).collect()));
+                result.push(Token::Brack(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
