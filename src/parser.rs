@@ -186,6 +186,7 @@ where
     Self: Sized,
 {
     fn parse_at(self, pos: usize) -> Result<Self>;
+    fn parse_const_at(self, pos: usize) -> Self;
     fn parse_quan_at(self, pos: usize) -> Result<Self>;
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
@@ -209,6 +210,19 @@ impl Parsable for Vec<ParseItem> {
             },
             ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
         }
+    }
+
+    fn parse_const_at(mut self, pos: usize) -> Self {
+        let entry = match &self[pos] {
+            ParseItem::Token(Token::Const(c)) => match c.as_str() {
+                "0" | "∅" | "\\emptyset" => NodeType::EmptySet,
+                x => unimplemented!("Parser for constant '{}' not implemented", x),
+            },
+            _ => unreachable!(),
+        };
+        let children = vec![];
+        self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        self
     }
 
     fn parse_quan_at(mut self, pos: usize) -> Result<Self> {
