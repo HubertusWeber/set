@@ -122,6 +122,7 @@ where
     fn parse_consts(self) -> Self;
     fn parse_vars(self) -> Self;
     fn parse_at(self, pos: usize) -> Result<Self>;
+    fn parse_rel_at(self, pos: usize) -> Result<Self>;
     fn parse_quan_at(self, pos: usize) -> Result<Self>;
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
@@ -206,6 +207,38 @@ impl Parsable for Vec<ParseItem> {
                 x => bail!("Unexpected token '{}'", x),
             },
             ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
+        }
+    }
+
+    fn parse_rel_at(self, pos: usize) -> Result<Self> {
+        assert!(
+            matches!(self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet))
+        );
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(self[pos + 1], ParseItem::Token(Token::Rel(..))),
+            "Unexpected token after set"
+        );
+        ensure!(
+            matches!(self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet)),
+            "Unexpected second relatum, expected variable, comprehension or empty set"
+        );
+        if let (
+            ParseItem::SyntaxNode(left),
+            ParseItem::Token(Token::Rel(rel)),
+            ParseItem::SyntaxNode(right),
+        ) = (self.remove(pos), self[pos], self.remove(pos + 1))
+        {
+            let entry = match rel.as_str() {
+                "=" => NodeType::Relation(Relation::Equality),
+                "∈" | "\\epsilon" => NodeType::Relation(Relation::Element),
+                x => unimplemented!("Parser for relation '{}' not implemented", x),
+            };
+            let children = vec![left, right];
+            self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+            Ok(self)
+        } else {
+            unreachable!()
         }
     }
 
