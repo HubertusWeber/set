@@ -164,7 +164,7 @@ impl Parsable for Vec<ParseItem> {
         }
     }
 
-    fn parse_rel_at(self, pos: usize) -> Result<Self> {
+    fn parse_rel_at(mut self, pos: usize) -> Result<Self> {
         assert!(
             matches!(self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet))
         );
@@ -173,6 +173,7 @@ impl Parsable for Vec<ParseItem> {
             matches!(self[pos + 1], ParseItem::Token(Token::Rel(..))),
             "Unexpected token after set"
         );
+        self = self.parse_at(pos + 2)?;
         ensure!(
             matches!(self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet)),
             "Unexpected second relatum, expected variable, comprehension or empty set"
