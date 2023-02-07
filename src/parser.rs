@@ -205,9 +205,7 @@ fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
     let formula = items.remove(pos + 2);
     let var = items.remove(pos + 1);
     if let (ParseItem::SyntaxNode(formula), ParseItem::SyntaxNode(var)) = (formula, var) {
-        if !matches!(var.entry, NodeType::Variable(..)) {
-            bail!("Expected variable after quantifier");
-        }
+        ensure!(matches!(var.entry, NodeType::Variable(..)));
         if let ParseItem::Token(Token::Quan(q)) = &items[pos] {
             let quan = SyntaxNode {
                 entry: match q.as_str() {
@@ -226,8 +224,42 @@ fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
         unreachable!("Found unparsed token(s) after quantifier")
     }
 }
-fn parse_conn_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    todo!()
+fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    ensure!(pos + 1 < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos + 1)?;
+    ensure!(pos + 3 < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos + 3)?;
+    ensure!(pos + 4 < items.len(), "Unexpected end of input");
+    ensure!(
+        matches!(items.remove(pos + 4), ParseItem::Token(Token::Paren(p)) if p.as_str() == ")"),
+        "Mising token ')'"
+    );
+    ensure!(
+        matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p.as_str() == "("),
+        "Missing token '('"
+    );
+    if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
+        (items.remove(pos), items.remove(pos + 1))
+    {
+        let children = vec![left, right];
+        let entry = NodeType::Connective(match &items[pos] {
+            ParseItem::Token(Token::Conn(c)) => match c.as_str() {
+                "∧" | "&&" | "\\land" => Connective::Conjunction,
+                "∨" | "||" | "\\lor" => Connective::Disjunction,
+                "→" | "->" | "\\rightarrow" => Connective::Implication,
+                "↔" | "<->" | "\\leftrightarrow" => Connective::Biconditional,
+                "¬" | "!" | "\\lnot" => {
+                    bail!("Unexpected negation token, expected binary connective")
+                }
+                x => bail!("Unexpected token '{}', expected binary connective", x),
+            },
+            x => bail!("Unexpected parse item {:?}, expected connective token", x),
+        });
+        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        Ok(items)
+    } else {
+        unreachable!("Found Token after calling parse_at")
+    }
 }
 fn parse_neg_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
     todo!()
