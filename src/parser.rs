@@ -69,72 +69,6 @@ fn create_parse_items(tokens: Vec<Token>) -> Vec<ParseItem> {
     tokens.into_iter().map(|t| ParseItem::Token(t)).collect()
 }
 
-fn parse_empty_set(items: Vec<ParseItem>) -> Vec<ParseItem> {
-    items
-        .into_iter()
-        .map(|i| match i {
-            ParseItem::Token(Token::Const(c)) => {
-                if matches!(c.as_str(), "0" | "∅" | "\\emptyset") {
-                    ParseItem::SyntaxNode(SyntaxNode {
-                        entry: NodeType::EmptySet,
-                        children: vec![],
-                    })
-                } else {
-                    unreachable!()
-                }
-            }
-            i => i,
-        })
-        .collect()
-}
-
-fn parse_variables(items: Vec<ParseItem>) -> Vec<ParseItem> {
-    let used_indices = std::cell::RefCell::new(HashSet::<u32>::new());
-    let mut index_map = HashMap::<String, u32>::new();
-    items
-        .into_iter()
-        .map(|i| match i {
-            ParseItem::Token(Token::Var(v)) => {
-                if v.starts_with(&v) && v.len() > 1 {
-                    let index = v[1..].parse().unwrap();
-                    used_indices.borrow_mut().insert(index);
-                    ParseItem::SyntaxNode(SyntaxNode {
-                        entry: NodeType::Variable(index),
-                        children: vec![],
-                    })
-                } else {
-                    ParseItem::Token(Token::Var(v))
-                }
-            }
-            i => i,
-        })
-        .collect::<Vec<ParseItem>>()
-        .into_iter()
-        .map(|i| match i {
-            ParseItem::Token(Token::Var(v)) => ParseItem::SyntaxNode(SyntaxNode {
-                entry: NodeType::Variable(if index_map.contains_key(&v) {
-                    *index_map.get(&v).unwrap()
-                } else {
-                    let index = (0..)
-                        .into_iter()
-                        .find_map(|n| {
-                            if used_indices.borrow_mut().insert(n) {
-                                Some(n)
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap();
-                    index_map.insert(v, index);
-                    index
-                }),
-                children: vec![],
-            }),
-            i => i,
-        })
-        .collect()
-}
-
 fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
     'outer: loop {
         for i in 0..items.len() {
@@ -273,19 +207,6 @@ impl Parsable for Vec<ParseItem> {
             },
             ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
         }
-    }
-
-    fn parse_const_at(mut self, pos: usize) -> Self {
-        let entry = match &self[pos] {
-            ParseItem::Token(Token::Const(c)) => match c.as_str() {
-                "0" | "∅" | "\\emptyset" => NodeType::EmptySet,
-                x => unimplemented!("Parser for constant '{}' not implemented", x),
-            },
-            _ => unreachable!(),
-        };
-        let children = vec![];
-        self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        self
     }
 
     fn parse_quan_at(mut self, pos: usize) -> Result<Self> {
