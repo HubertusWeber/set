@@ -81,6 +81,7 @@ where
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
+    fn parse_op_at(self, pos: usize) -> Result<Self>;
 }
 
 impl Parsable for Vec<ParseItem> {
@@ -296,6 +297,34 @@ impl Parsable for Vec<ParseItem> {
         {
             let entry = NodeType::Comprehension;
             let children = vec![left, right];
+            self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+            Ok(self)
+        } else {
+            unreachable!("Found token after calling parse_at");
+        }
+    }
+
+    fn parse_op_at(self, pos: usize) -> Result<Self> {
+        assert!(matches!(self[pos], ParseItem::Token(Token::Op(..))));
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(self.remove(pos + 1), ParseItem::Token(Token::Paren(p)) if p == "("),
+            "Unexpected token, expected '('"
+        );
+        self = self.parse_at(pos + 1)?;
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(self.remove(pos + 2), ParseItem::Token(Token::Paren(p)) if p == ""),
+            "Unexpected token, expected ')'"
+        );
+        if let (ParseItem::Token(Token::Op(op)), ParseItem::SyntaxNode(operand)) =
+            (self[pos], self.remove(pos + 1))
+        {
+            let entry = match op.as_str() {
+                "Pot" => NodeType::Operator(Operator::PowerSet),
+                x => unimplemented!("Operator token '{}' not implemented in parser", x),
+            };
+            let children = vec![operand];
             self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
             Ok(self)
         } else {
