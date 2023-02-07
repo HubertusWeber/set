@@ -233,15 +233,13 @@ impl Parsable for Vec<ParseItem> {
         if let (ParseItem::SyntaxNode(formula), ParseItem::SyntaxNode(var)) = (formula, var) {
             ensure!(matches!(var.entry, NodeType::Variable(..)));
             if let ParseItem::Token(Token::Quan(q)) = &self[pos] {
-                let quan = SyntaxNode {
-                    entry: match q.as_str() {
-                        "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
-                        "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
-                        x => unimplemented!("Quantifier token '{}' not implemented in parser", x),
-                    },
-                    children: vec![var, formula],
+                let entry = match q.as_str() {
+                    "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
+                    "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
+                    x => unimplemented!("Quantifier token '{}' not implemented in parser", x),
                 };
-                self[pos] = ParseItem::SyntaxNode(quan);
+                let children = vec![var, formula];
+                self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
                 Ok(self)
             } else {
                 unreachable!()
