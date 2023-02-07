@@ -185,8 +185,9 @@ trait Parsable
 where
     Self: Sized,
 {
+    fn parse_consts(self) -> Self;
+    fn parse_vars(self) -> Self;
     fn parse_at(self, pos: usize) -> Result<Self>;
-    fn parse_const_at(self, pos: usize) -> Self;
     fn parse_quan_at(self, pos: usize) -> Result<Self>;
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
@@ -194,6 +195,68 @@ where
 }
 
 impl Parsable for Vec<ParseItem> {
+    fn parse_consts(self) -> Self {
+        self.into_iter()
+            .map(|i| match i {
+                ParseItem::Token(Token::Const(c)) => match c.as_str() {
+                    "0" | "∅" | "\\emptyset" => {
+                        let entry = NodeType::EmptySet;
+                        let children = vec![];
+                        ParseItem::SyntaxNode(SyntaxNode { entry, children })
+                    }
+                    x => unimplemented!("Parser for constant '{}' not implemented", x),
+                },
+                i => i,
+            })
+            .collect()
+    }
+
+    fn parse_vars(self) -> Self {
+        let used_indices = std::cell::RefCell::new(HashSet::<u32>::new());
+        let mut index_map = HashMap::<String, u32>::new();
+        self.into_iter()
+            .map(|i| match i {
+                ParseItem::Token(Token::Var(v)) => {
+                    if v.starts_with(&v) && v.len() > 1 {
+                        let index = v[1..].parse().unwrap();
+                        used_indices.borrow_mut().insert(index);
+                        let entry = NodeType::Variable(index);
+                        let children = vec![];
+                        ParseItem::SyntaxNode(SyntaxNode { entry, children })
+                    } else {
+                        ParseItem::Token(Token::Var(v))
+                    }
+                }
+                i => i,
+            })
+            .collect::<Vec<ParseItem>>()
+            .into_iter()
+            .map(|i| match i {
+                ParseItem::Token(Token::Var(v)) => {
+                    let entry = NodeType::Variable(if index_map.contains_key(&v) {
+                        *index_map.get(&v).unwrap()
+                    } else {
+                        let index = (0..)
+                            .into_iter()
+                            .find_map(|n| {
+                                if used_indices.borrow_mut().insert(n) {
+                                    Some(n)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap();
+                        index_map.insert(v, index);
+                        index
+                    });
+                    let children = vec![];
+                    ParseItem::SyntaxNode(SyntaxNode { entry, children })
+                }
+                i => i,
+            })
+            .collect()
+    }
+
     fn parse_at(self, pos: usize) -> Result<Self> {
         ensure!(pos < self.len(), "Unexpected end of input");
         match &self[pos] {
