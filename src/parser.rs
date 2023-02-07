@@ -234,7 +234,7 @@ fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
     ensure!(pos + 3 < items.len(), "Unexpected end of input");
     ensure!(
         matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == ")"),
-        "Mising token ')'"
+        "Missing token ')'"
     );
     if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
         (items.remove(pos), items.remove(pos + 1))
