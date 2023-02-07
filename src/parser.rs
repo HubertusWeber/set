@@ -226,14 +226,14 @@ fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
 }
 
 fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p.as_str() == "("));
+    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p == "("));
     ensure!(pos < items.len(), "Unexpected end of input");
     items = parse_at(items, pos)?;
     ensure!(pos + 2 < items.len(), "Unexpected end of input");
     items = parse_at(items, pos + 2)?;
     ensure!(pos + 3 < items.len(), "Unexpected end of input");
     ensure!(
-        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p.as_str() == ")"),
+        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == ")"),
         "Mising token ')'"
     );
     if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
