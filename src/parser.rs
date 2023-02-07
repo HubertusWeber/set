@@ -181,7 +181,7 @@ impl Parsable for Vec<ParseItem> {
 
     fn parse_rel_at(mut self, pos: usize) -> Result<Self> {
         assert!(
-            matches!(self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet))
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet))
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
@@ -190,12 +190,12 @@ impl Parsable for Vec<ParseItem> {
         );
         self = self.parse_at(pos + 2)?;
         ensure!(
-            matches!(self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet)),
+            matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet)),
             "Unexpected second relatum, expected variable, comprehension or empty set"
         );
-        let ParseItem::SyntaxNode(left) = self.remove(pos);
-        let ParseItem::Token(Token::Rel(rel)) = self[pos];
-        let ParseItem::SyntaxNode(right) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
+        let ParseItem::Token(Token::Rel(rel)) = &self[pos] else {unreachable!()};
         let entry = match rel.as_str() {
             "=" => NodeType::Relation(Relation::Equality),
             "∈" | "\\epsilon" => NodeType::Relation(Relation::Element),
@@ -210,13 +210,13 @@ impl Parsable for Vec<ParseItem> {
         assert!(matches!(self[pos], ParseItem::Token(Token::Quan(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
-        let ParseItem::SyntaxNode(var) = self.remove(pos + 1);
-        let ParseItem::SyntaxNode(formula) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(var) = self.remove(pos + 1) else {unreachable!()};
+        let ParseItem::SyntaxNode(formula) = self.remove(pos + 1) else {unreachable!()};
         ensure!(
             matches!(var.entry, NodeType::Variable(..)),
             "Unexpected Token, expected variable after quantifier"
         );
-        let ParseItem::Token(Token::Quan(q)) = self[pos];
+        let ParseItem::Token(Token::Quan(q)) = &self[pos] else {unreachable!()};
         let entry = match q.as_str() {
             "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
             "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
@@ -238,8 +238,8 @@ impl Parsable for Vec<ParseItem> {
             matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == ")"),
             "Missing token ')'"
         );
-        let ParseItem::SyntaxNode(left) = self.remove(pos);
-        let ParseItem::SyntaxNode(right) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
         let entry = NodeType::Connective(match &self[pos] {
             ParseItem::Token(Token::Conn(c)) => match c.as_str() {
                 "∧" | "&&" | "\\land" => Connective::Conjunction,
@@ -264,7 +264,7 @@ impl Parsable for Vec<ParseItem> {
         );
         ensure!(pos + 1 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 1)?;
-        let ParseItem::SyntaxNode(child) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(child) = self.remove(pos + 1) else {unreachable!()};
         let entry = NodeType::Connective(Connective::Negation);
         let children = vec![child];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
@@ -290,15 +290,15 @@ impl Parsable for Vec<ParseItem> {
             matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == "}"),
             "Mising token '}}'"
         );
-        let ParseItem::SyntaxNode(left) = self.remove(pos);
-        let ParseItem::SyntaxNode(right) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
         let entry = NodeType::Comprehension;
         let children = vec![left, right];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
         Ok(self)
     }
 
-    fn parse_op_at(self, pos: usize) -> Result<Self> {
+    fn parse_op_at(mut self, pos: usize) -> Result<Self> {
         assert!(matches!(self[pos], ParseItem::Token(Token::Op(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
@@ -311,8 +311,8 @@ impl Parsable for Vec<ParseItem> {
             matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ""),
             "Unexpected token, expected ')'"
         );
-        let ParseItem::Token(Token::Op(op)) = self[pos];
-        let ParseItem::SyntaxNode(operand) = self.remove(pos + 1);
+        let ParseItem::SyntaxNode(operand) = self.remove(pos + 1) else {unreachable!()};
+        let ParseItem::Token(Token::Op(op)) = &self[pos] else {unreachable!()};
         let entry = match op.as_str() {
             "Pot" => NodeType::Operator(Operator::PowerSet),
             x => unimplemented!("Operator token '{}' not implemented in parser", x),
