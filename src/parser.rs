@@ -275,8 +275,36 @@ fn parse_neg_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>>
         unreachable!("Found Token after calling parse_at")
     }
 }
-fn parse_comp_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    todo!()
+
+fn parse_comp_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Conn(c)) if c == "{"));
+    ensure!(pos < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos)?;
+    ensure!(
+        matches!(&items[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
+        "First part of set comprehension must be an element relation"
+    );
+    ensure!(pos + 2 < items.len(), "Unexpected end of input");
+    ensure!(
+        matches!(&items[pos + 1],ParseItem::Token(Token::Paren(p)) if p == "|"),
+        "Missing token '|' in set comprehension"
+    );
+    items = parse_at(items, pos + 2)?;
+    ensure!(pos + 3 < items.len(), "Unexpected end of input");
+    ensure!(
+        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == "}"),
+        "Mising token '}}'"
+    );
+    if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
+        (items.remove(pos), items.remove(pos + 1))
+    {
+        let entry = NodeType::Comprehension;
+        let children = vec![left, right];
+        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        Ok(items)
+    } else {
+        unreachable!("Found token after calling parse_at");
+    }
 }
 
 fn max_depth(items: &Vec<ParseItem>) -> Result<Depth> {
