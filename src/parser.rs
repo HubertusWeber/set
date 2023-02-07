@@ -218,30 +218,27 @@ fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
             items[pos] = ParseItem::SyntaxNode(quan);
             Ok(items)
         } else {
-            unreachable!("Called parse_quan_at with a position not containing a qunatifier token")
+            unreachable!()
         }
     } else {
-        unreachable!("Found unparsed token(s) after quantifier")
+        unreachable!("Found Token after calling parse_at")
     }
 }
+
 fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    ensure!(pos + 1 < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos + 1)?;
+    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p.as_str() == "("));
+    ensure!(pos < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos)?;
+    ensure!(pos + 2 < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos + 2)?;
     ensure!(pos + 3 < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos + 3)?;
-    ensure!(pos + 4 < items.len(), "Unexpected end of input");
     ensure!(
-        matches!(items.remove(pos + 4), ParseItem::Token(Token::Paren(p)) if p.as_str() == ")"),
+        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p.as_str() == ")"),
         "Mising token ')'"
-    );
-    ensure!(
-        matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p.as_str() == "("),
-        "Missing token '('"
     );
     if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
         (items.remove(pos), items.remove(pos + 1))
     {
-        let children = vec![left, right];
         let entry = NodeType::Connective(match &items[pos] {
             ParseItem::Token(Token::Conn(c)) => match c.as_str() {
                 "∧" | "&&" | "\\land" => Connective::Conjunction,
@@ -255,6 +252,7 @@ fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
             },
             x => bail!("Unexpected parse item {:?}, expected connective token", x),
         });
+        let children = vec![left, right];
         items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
         Ok(items)
     } else {
