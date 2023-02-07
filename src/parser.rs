@@ -58,11 +58,8 @@ struct Depth {
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
-    let items = create_parse_items(tokens);
-    let items = parse_empty_set(items);
-    let items = parse_variables(items);
-    let items = parse_relations(items)?;
-    todo!("{:?}", max_depth(&items))
+    let syntax_tree = create_parse_items(tokens).parse()?;
+    todo!("{:?}", syntax_tree);
 }
 
 fn create_parse_items(tokens: Vec<Token>) -> Vec<ParseItem> {
@@ -73,6 +70,7 @@ trait Parsable
 where
     Self: Sized,
 {
+    fn parse(self) -> Result<SyntaxNode>;
     fn parse_consts(self) -> Self;
     fn parse_vars(self) -> Self;
     fn parse_at(self, pos: usize) -> Result<Self>;
@@ -85,6 +83,13 @@ where
 }
 
 impl Parsable for Vec<ParseItem> {
+    fn parse(mut self) -> Result<SyntaxNode> {
+        self = self.parse_consts().parse_vars().parse_at(0)?;
+        ensure!(self.len() == 1, "Unexpected token, expected end of input");
+        let ParseItem::SyntaxNode(result) = self.remove(0) else  {unreachable!()};
+        Ok(result)
+    }
+
     fn parse_consts(self) -> Self {
         self.into_iter()
             .map(|i| match i {
