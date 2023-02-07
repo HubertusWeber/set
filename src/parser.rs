@@ -181,129 +181,142 @@ fn parse_relations(mut items: Vec<ParseItem>) -> Result<Vec<ParseItem>> {
     }
 }
 
-fn parse_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    ensure!(pos < items.len(), "Unexpected end of input");
-    match &items[pos] {
-        ParseItem::SyntaxNode(..) => Ok(items),
-        ParseItem::Token(Token::Quan(..)) => parse_quan_at(items, pos),
-        ParseItem::Token(Token::Paren(p)) => match p.as_str() {
-            "(" => parse_conn_at(items, pos),
-            "{" => parse_relations(parse_comp_at(items, pos)?),
-            x => bail!("Unexpected token '{}'", x),
-        },
-        ParseItem::Token(Token::Conn(c)) => match c.as_str() {
-            "¬" | "!" | "\\lnot" => parse_neg_at(items, pos),
-            x => bail!("Unexpected token '{}'", x),
-        },
-        ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
-    }
+trait Parsable
+where
+    Self: Sized,
+{
+    fn parse_at(self, pos: usize) -> Result<Self>;
+    fn parse_quan_at(self, pos: usize) -> Result<Self>;
+    fn parse_conn_at(self, pos: usize) -> Result<Self>;
+    fn parse_neg_at(self, pos: usize) -> Result<Self>;
+    fn parse_comp_at(self, pos: usize) -> Result<Self>;
 }
 
-fn parse_quan_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    ensure!(pos + 2 < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos + 2)?;
-    let formula = items.remove(pos + 2);
-    let var = items.remove(pos + 1);
-    if let (ParseItem::SyntaxNode(formula), ParseItem::SyntaxNode(var)) = (formula, var) {
-        ensure!(matches!(var.entry, NodeType::Variable(..)));
-        if let ParseItem::Token(Token::Quan(q)) = &items[pos] {
-            let quan = SyntaxNode {
-                entry: match q.as_str() {
-                    "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
-                    "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
-                    x => unimplemented!("Quantifier token '{}' not implemented in parser", x),
-                },
-                children: vec![var, formula],
-            };
-            items[pos] = ParseItem::SyntaxNode(quan);
-            Ok(items)
-        } else {
-            unreachable!()
-        }
-    } else {
-        unreachable!("Found Token after calling parse_at")
-    }
-}
-
-fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Paren(p)) if p == "("));
-    ensure!(pos < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos)?;
-    ensure!(pos + 2 < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos + 2)?;
-    ensure!(pos + 3 < items.len(), "Unexpected end of input");
-    ensure!(
-        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == ")"),
-        "Missing token ')'"
-    );
-    if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
-        (items.remove(pos), items.remove(pos + 1))
-    {
-        let entry = NodeType::Connective(match &items[pos] {
-            ParseItem::Token(Token::Conn(c)) => match c.as_str() {
-                "∧" | "&&" | "\\land" => Connective::Conjunction,
-                "∨" | "||" | "\\lor" => Connective::Disjunction,
-                "→" | "->" | "\\rightarrow" => Connective::Implication,
-                "↔" | "<->" | "\\leftrightarrow" => Connective::Biconditional,
-                "¬" | "!" | "\\lnot" => {
-                    bail!("Unexpected negation token, expected binary connective")
-                }
-                x => bail!("Unexpected token '{}', expected binary connective", x),
+impl Parsable for Vec<ParseItem> {
+    fn parse_at(self, pos: usize) -> Result<Self> {
+        ensure!(pos < self.len(), "Unexpected end of input");
+        match &self[pos] {
+            ParseItem::SyntaxNode(..) => Ok(self),
+            ParseItem::Token(Token::Quan(..)) => self.parse_quan_at(pos),
+            ParseItem::Token(Token::Paren(p)) => match p.as_str() {
+                "(" => self.parse_conn_at(pos),
+                "{" => self.parse_comp_at(pos),
+                x => bail!("Unexpected token '{}'", x),
             },
-            x => bail!("Unexpected parse item {:?}, expected connective token", x),
-        });
-        let children = vec![left, right];
-        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(items)
-    } else {
-        unreachable!("Found Token after calling parse_at")
+            ParseItem::Token(Token::Conn(c)) => match c.as_str() {
+                "¬" | "!" | "\\lnot" => self.parse_neg_at(pos),
+                x => bail!("Unexpected token '{}'", x),
+            },
+            ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
+        }
     }
-}
 
-fn parse_neg_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    assert!(
-        matches!(&items[pos], ParseItem::Token(Token::Conn(c)) if matches!(c.as_str(), "¬" | "!" | "\\lnot"))
-    );
-    ensure!(pos + 1 < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos + 1)?;
-    if let ParseItem::SyntaxNode(child) = items.remove(pos + 1) {
-        let entry = NodeType::Connective(Connective::Negation);
-        let children = vec![child];
-        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(items)
-    } else {
-        unreachable!("Found Token after calling parse_at")
+    fn parse_quan_at(mut self, pos: usize) -> Result<Self> {
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        self = self.parse_at(pos + 2)?;
+        let formula = self.remove(pos + 2);
+        let var = self.remove(pos + 1);
+        if let (ParseItem::SyntaxNode(formula), ParseItem::SyntaxNode(var)) = (formula, var) {
+            ensure!(matches!(var.entry, NodeType::Variable(..)));
+            if let ParseItem::Token(Token::Quan(q)) = &self[pos] {
+                let quan = SyntaxNode {
+                    entry: match q.as_str() {
+                        "∀" | "\\forall" => NodeType::Quantifier(Quantifier::Universal),
+                        "∃" | "\\exists" => NodeType::Quantifier(Quantifier::Existential),
+                        x => unimplemented!("Quantifier token '{}' not implemented in parser", x),
+                    },
+                    children: vec![var, formula],
+                };
+                self[pos] = ParseItem::SyntaxNode(quan);
+                Ok(self)
+            } else {
+                unreachable!()
+            }
+        } else {
+            unreachable!("Found Token after calling parse_at")
+        }
     }
-}
 
-fn parse_comp_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    assert!(matches!(items.remove(pos), ParseItem::Token(Token::Conn(c)) if c == "{"));
-    ensure!(pos < items.len(), "Unexpected end of input");
-    items = parse_at(items, pos)?;
-    ensure!(
-        matches!(&items[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
-        "First part of set comprehension must be an element relation"
-    );
-    ensure!(pos + 2 < items.len(), "Unexpected end of input");
-    ensure!(
-        matches!(&items[pos + 1],ParseItem::Token(Token::Paren(p)) if p == "|"),
-        "Missing token '|' in set comprehension"
-    );
-    items = parse_at(items, pos + 2)?;
-    ensure!(pos + 3 < items.len(), "Unexpected end of input");
-    ensure!(
-        matches!(items.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == "}"),
-        "Mising token '}}'"
-    );
-    if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
-        (items.remove(pos), items.remove(pos + 1))
-    {
-        let entry = NodeType::Comprehension;
-        let children = vec![left, right];
-        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(items)
-    } else {
-        unreachable!("Found token after calling parse_at");
+    fn parse_conn_at(mut self, pos: usize) -> Result<Self> {
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Paren(p)) if p == "("));
+        ensure!(pos < self.len(), "Unexpected end of input");
+        self = self.parse_at(pos)?;
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        self = self.parse_at(pos + 2)?;
+        ensure!(pos + 3 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == ")"),
+            "Missing token ')'"
+        );
+        if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
+            (self.remove(pos), self.remove(pos + 1))
+        {
+            let entry = NodeType::Connective(match &self[pos] {
+                ParseItem::Token(Token::Conn(c)) => match c.as_str() {
+                    "∧" | "&&" | "\\land" => Connective::Conjunction,
+                    "∨" | "||" | "\\lor" => Connective::Disjunction,
+                    "→" | "->" | "\\rightarrow" => Connective::Implication,
+                    "↔" | "<->" | "\\leftrightarrow" => Connective::Biconditional,
+                    "¬" | "!" | "\\lnot" => {
+                        bail!("Unexpected negation token, expected binary connective")
+                    }
+                    x => bail!("Unexpected token '{}', expected binary connective", x),
+                },
+                x => bail!("Unexpected parse item {:?}, expected connective token", x),
+            });
+            let children = vec![left, right];
+            self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+            Ok(self)
+        } else {
+            unreachable!("Found Token after calling parse_at")
+        }
+    }
+
+    fn parse_neg_at(mut self, pos: usize) -> Result<Self> {
+        assert!(
+            matches!(&self[pos], ParseItem::Token(Token::Conn(c)) if matches!(c.as_str(), "¬" | "!" | "\\lnot"))
+        );
+        ensure!(pos + 1 < self.len(), "Unexpected end of input");
+        self = self.parse_at(pos + 1)?;
+        if let ParseItem::SyntaxNode(child) = self.remove(pos + 1) {
+            let entry = NodeType::Connective(Connective::Negation);
+            let children = vec![child];
+            self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+            Ok(self)
+        } else {
+            unreachable!("Found Token after calling parse_at")
+        }
+    }
+
+    fn parse_comp_at(mut self, pos: usize) -> Result<Self> {
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Conn(c)) if c == "{"));
+        ensure!(pos < self.len(), "Unexpected end of input");
+        self = self.parse_at(pos)?;
+        ensure!(
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
+            "First part of set comprehension must be an element relation"
+        );
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(&self[pos + 1],ParseItem::Token(Token::Paren(p)) if p == "|"),
+            "Missing token '|' in set comprehension"
+        );
+        self = self.parse_at(pos + 2)?;
+        ensure!(pos + 3 < self.len(), "Unexpected end of input");
+        ensure!(
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Paren(p)) if p == "}"),
+            "Mising token '}}'"
+        );
+        if let (ParseItem::SyntaxNode(left), ParseItem::SyntaxNode(right)) =
+            (self.remove(pos), self.remove(pos + 1))
+        {
+            let entry = NodeType::Comprehension;
+            let children = vec![left, right];
+            self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+            Ok(self)
+        } else {
+            unreachable!("Found token after calling parse_at");
+        }
     }
 }
 
