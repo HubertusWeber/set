@@ -74,7 +74,7 @@ fn parse_empty_set(items: Vec<ParseItem>) -> Vec<ParseItem> {
         .into_iter()
         .map(|i| match i {
             ParseItem::Token(Token::Const(c)) => {
-                if ["0", "∅", "\\emptyset"].contains(&c.as_str()) {
+                if matches!(c.as_str(), "0" | "∅" | "\\emptyset") {
                     ParseItem::SyntaxNode(SyntaxNode {
                         entry: NodeType::EmptySet,
                         children: vec![],
@@ -273,7 +273,7 @@ fn max_depth(items: &Vec<ParseItem>) -> Result<Depth> {
     let mut max_depth = Depth { val: 0, pos: 0 };
     for (pos, i) in items.iter().enumerate() {
         if let ParseItem::Token(Token::Paren(p)) = i {
-            if ["(", "{"].contains(&p.as_str()) {
+            if p == "(" || p == "{" {
                 parens.push(p.chars().next().unwrap());
                 if parens.len() > max_depth.val {
                     max_depth.val = parens.len();
