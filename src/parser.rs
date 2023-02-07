@@ -150,17 +150,31 @@ impl Parsable for Vec<ParseItem> {
     fn parse_at(self, pos: usize) -> Result<Self> {
         ensure!(pos < self.len(), "Unexpected end of input");
         match &self[pos] {
+            ParseItem::SyntaxNode(n)
+                if matches!(
+                    n.entry,
+                    NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet
+                ) =>
+            {
+                if pos + 1 < self.len() && matches!(self[pos + 1], ParseItem::Token(Token::Rel(..)))
+                {
+                    self.parse_rel_at(pos)
+                } else {
+                    Ok(self)
+                }
+            }
             ParseItem::SyntaxNode(..) => Ok(self),
             ParseItem::Token(Token::Quan(..)) => self.parse_quan_at(pos),
             ParseItem::Token(Token::Brack(p)) => match p.as_str() {
                 "(" => self.parse_conn_at(pos),
                 "{" => self.parse_comp_at(pos),
-                x => bail!("Unexpected token '{}'", x),
+                x => unimplemented!("Parser for bracket '{}' not implemented", x),
             },
             ParseItem::Token(Token::Conn(c)) => match c.as_str() {
                 "¬" | "!" | "\\lnot" => self.parse_neg_at(pos),
-                x => bail!("Unexpected token '{}'", x),
+                x => unimplemented!("Parser for connective '{}' not implemented", x),
             },
+            ParseItem::Token(Token::Op(..)) => self.parse_op_at(pos),
             ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
         }
     }
