@@ -259,8 +259,21 @@ fn parse_conn_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>
         unreachable!("Found Token after calling parse_at")
     }
 }
-fn parse_neg_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
-    todo!()
+
+fn parse_neg_at(mut items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
+    assert!(
+        matches!(&items[pos], ParseItem::Token(Token::Conn(c)) if matches!(c.as_str(), "¬" | "!" | "\\lnot"))
+    );
+    ensure!(pos + 1 < items.len(), "Unexpected end of input");
+    items = parse_at(items, pos + 1)?;
+    if let ParseItem::SyntaxNode(child) = items.remove(pos + 1) {
+        let entry = NodeType::Connective(Connective::Negation);
+        let children = vec![child];
+        items[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        Ok(items)
+    } else {
+        unreachable!("Found Token after calling parse_at")
+    }
 }
 fn parse_comp_at(items: Vec<ParseItem>, pos: usize) -> Result<Vec<ParseItem>> {
     todo!()
