@@ -326,32 +326,3 @@ impl Parsable for Vec<ParseItem> {
         Ok(self)
     }
 }
-
-fn max_depth(items: &Vec<ParseItem>) -> Result<Depth> {
-    let mut parens = Vec::<char>::new();
-    let mut max_depth = Depth { val: 0, pos: 0 };
-    for (pos, i) in items.iter().enumerate() {
-        if let ParseItem::Token(Token::Brack(p)) = i {
-            if p == "(" || p == "{" {
-                parens.push(p.chars().next().unwrap());
-                if parens.len() > max_depth.val {
-                    max_depth.val = parens.len();
-                    max_depth.pos = pos;
-                }
-            } else if p == ")" {
-                if parens.pop() != Some('(') {
-                    bail!("Unexpected token ')'");
-                };
-            } else if p == "}" {
-                if parens.pop() != Some('{') {
-                    bail!("Unexpected token '}}'");
-                };
-            }
-        }
-    }
-    if let Some(p) = parens.pop() {
-        bail!("Unclosed parenthesis '{}'", p)
-    } else {
-        Ok(max_depth)
-    }
-}
