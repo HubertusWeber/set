@@ -276,7 +276,7 @@ impl Parsable for Vec<ParseItem> {
     }
 
     fn parse_comp_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Conn(c)) if c == "{"));
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(c)) if c == "{"));
         ensure!(pos < self.len(), "Unexpected end of input");
         self = self.parse_at(pos)?;
         ensure!(
@@ -292,14 +292,14 @@ impl Parsable for Vec<ParseItem> {
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
         ensure!(
             matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == "}"),
-            "Mising token '}}'"
+            "Missing token '}}'"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
         let entry = NodeType::Comprehension;
         let children = vec![left, right];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(self)
+        self.parse_at(pos)
     }
 
     fn parse_op_at(mut self, pos: usize) -> Result<Self> {
