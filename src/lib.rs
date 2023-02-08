@@ -2,12 +2,16 @@
 
 use anyhow::Result;
 
+mod display;
 mod lexer;
 mod parser;
 
 pub fn run() -> Result<()> {
-    let tokens = lexer::tokanize("\\forallx(v0 -> 0)".into())?;
-    let syntax_tree = parser::parse(tokens);
-    println!("{:?}", syntax_tree);
+    let input = "\\forall x (x = 0 -> {z \\epsilon x | ! z = 0}\\epsilon v1)";
+    println!("{}", input);
+    let tokens = lexer::tokanize(input.into())?;
+    println!("{:?}", tokens);
+    let syntax_tree = parser::parse(tokens)?;
+    println!("{}", syntax_tree);
     Ok(())
 }

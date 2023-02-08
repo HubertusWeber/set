@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Token {
     Brack(String),
     Rel(String),

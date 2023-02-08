@@ -10,8 +10,8 @@ enum ParseItem {
 
 #[derive(Debug, Clone)]
 pub struct SyntaxNode {
-    entry: NodeType,
-    children: Vec<SyntaxNode>,
+    pub entry: NodeType,
+    pub children: Vec<SyntaxNode>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -58,12 +58,11 @@ struct Depth {
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
-    let syntax_tree = create_parse_items(tokens).parse()?;
-    todo!("{:?}", syntax_tree);
-}
-
-fn create_parse_items(tokens: Vec<Token>) -> Vec<ParseItem> {
-    tokens.into_iter().map(|t| ParseItem::Token(t)).collect()
+    tokens
+        .into_iter()
+        .map(|t| ParseItem::Token(t))
+        .collect::<Vec<ParseItem>>()
+        .parse()
 }
 
 trait Parsable
