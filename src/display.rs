@@ -12,6 +12,9 @@ impl fmt::Display for SyntaxNode {
                 Relation::Equality => write!(f, "{} = {}", self.children[0], self.children[1]),
                 Relation::Element => write!(f, "{} ∈ {}", self.children[0], self.children[1]),
                 Relation::Subset => write!(f, "{} ⊆ {}", self.children[0], self.children[1]),
+                Relation::NotEqual => write!(f, "{} ≠ {}", self.children[0], self.children[1]),
+                Relation::NotElement => write!(f, "{} ∉ {}", self.children[0], self.children[1]),
+                Relation::NotSubset => write!(f, "{} ⊈ {}", self.children[0], self.children[1]),
             },
             NodeType::Operator(o) => match o {
                 Operator::PowerSet => write!(f, "Pot({})", self.children[0]),

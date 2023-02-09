@@ -12,6 +12,20 @@ pub enum Token {
     Const(String),
 }
 
+const REL: &'static [&'static str] = &[
+    "=",
+    "∈",
+    "\\in",
+    "⊆",
+    "\\subseteq",
+    "≠",
+    "!=",
+    "\\neq",
+    "∉",
+    "\\notin",
+    "⊈",
+    "\\nsubseteq",
+];
 const CONN: &'static [&'static str] = &[
     "¬",
     "∧",
@@ -32,7 +46,6 @@ const CONN: &'static [&'static str] = &[
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|", ","];
 const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
-const REL: &'static [&'static str] = &["=", "∈", "\\epsilon", "⊆", "\\subseteq"];
 const UNOP: &'static [&'static str] = &["Pot"];
 const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
 
@@ -40,6 +53,12 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
     input = input.split_whitespace().collect();
     'outer: while !input.is_empty() {
+        for x in REL {
+            if input.starts_with(x) {
+                result.push(Token::Rel(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
         for x in CONN {
             if input.starts_with(x) {
                 result.push(Token::Conn(input.drain(..x.len()).collect()));
@@ -61,12 +80,6 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
         for x in CONST {
             if input.starts_with(x) {
                 result.push(Token::Const(input.drain(..x.len()).collect()));
-                continue 'outer;
-            }
-        }
-        for x in REL {
-            if input.starts_with(x) {
-                result.push(Token::Rel(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }

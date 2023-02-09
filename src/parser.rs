@@ -31,6 +31,9 @@ pub enum Relation {
     Element,
     Equality,
     Subset,
+    NotElement,
+    NotEqual,
+    NotSubset,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -225,8 +228,11 @@ impl Parsable for Vec<ParseItem> {
         let ParseItem::Token(Token::Rel(rel)) = &self[pos] else {unreachable!()};
         let entry = match rel.as_str() {
             "=" => NodeType::Relation(Relation::Equality),
-            "∈" | "\\epsilon" => NodeType::Relation(Relation::Element),
+            "∈" | "\\in" => NodeType::Relation(Relation::Element),
             "⊆" | "\\subseteq" => NodeType::Relation(Relation::Subset),
+            "≠" | "!=" | "\\neq" => NodeType::Relation(Relation::NotEqual),
+            "∉" | "\\notin" => NodeType::Relation(Relation::NotElement),
+            "⊈" | "\\nsubseteq" => NodeType::Relation(Relation::NotSubset),
             x => unimplemented!("Parser for relation '{}' not implemented", x),
         };
         let children = vec![left, right];
