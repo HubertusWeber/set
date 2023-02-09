@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
-use crate::parser::{Connective, NodeType, Relation, SyntaxNode};
+use crate::parser::{Connective, NodeType, Quantifier, Relation, SyntaxNode};
 
 impl SyntaxNode {
     pub fn transform(self) -> Self {
-        self.negated_relations()
+        self.negated_relation().subset()
     }
 
-    fn negated_relations(mut self) -> Self {
+    fn negated_relation(mut self) -> Self {
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).negated_relations();
+            let child = self.children.remove(0).negated_relation();
             self.children.push(child);
         }
         if let NodeType::Relation(r) = self.entry {
@@ -23,6 +23,39 @@ impl SyntaxNode {
             let child = SyntaxNode { entry, children };
             self.entry = NodeType::Connective(Connective::Negation);
             self.children = vec![child];
+        }
+        self
+    }
+
+    fn subset(mut self) -> Self {
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).subset();
+            self.children.push(child);
+        }
+        match self.entry {
+            NodeType::Relation(r) if matches!(r, Relation::Subset) => {
+                let index = self.get_free_vars(1)[0];
+                let var = SyntaxNode {
+                    entry: NodeType::Variable(index),
+                    children: vec![],
+                };
+                let antecedent = SyntaxNode {
+                    entry: NodeType::Relation(Relation::Element),
+                    children: vec![var.clone(), self.children.remove(0)],
+                };
+                let consequent = SyntaxNode {
+                    entry: NodeType::Relation(Relation::Element),
+                    children: vec![var.clone(), self.children.remove(0)],
+                };
+                let implication = SyntaxNode {
+                    entry: NodeType::Connective(Connective::Implication),
+                    children: vec![antecedent, consequent],
+                };
+                self.entry = NodeType::Quantifier(Quantifier::Universal);
+                self.children.push(var);
+                self.children.push(implication);
+            }
+            _ => (),
         }
         self
     }
