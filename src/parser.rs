@@ -80,7 +80,7 @@ where
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
     fn parse_unop_at(self, pos: usize) -> Result<Self>;
-    fn parse_binnop_at(self, pos: usize) -> Result<Self>;
+    fn parse_binop_at(self, pos: usize) -> Result<Self>;
 }
 
 impl Parsable for Vec<ParseItem> {
@@ -167,7 +167,7 @@ impl Parsable for Vec<ParseItem> {
             {
                 match self[pos + 1] {
                     ParseItem::Token(Token::Rel(..)) => self.parse_rel_at(pos),
-                    ParseItem::Token(Token::BinOp(..)) => self.parse_binnop_at(pos),
+                    ParseItem::Token(Token::BinOp(..)) => self.parse_binop_at(pos),
                     _ => Ok(self),
                 }
             }
@@ -331,7 +331,7 @@ impl Parsable for Vec<ParseItem> {
         self.parse_at(pos)
     }
 
-    fn parse_binnop_at(self, pos: usize) -> Result<Self> {
+    fn parse_binop_at(self, pos: usize) -> Result<Self> {
         todo!()
     }
 }
