@@ -29,6 +29,7 @@ pub enum NodeType {
 pub enum Relation {
     Element,
     Equality,
+    Subset,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -206,6 +207,7 @@ impl Parsable for Vec<ParseItem> {
         let entry = match rel.as_str() {
             "=" => NodeType::Relation(Relation::Equality),
             "∈" | "\\epsilon" => NodeType::Relation(Relation::Element),
+            "⊆" | "\\subseteq" => NodeType::Relation(Relation::Subset),
             x => unimplemented!("Parser for relation '{}' not implemented", x),
         };
         let children = vec![left, right];
@@ -241,7 +243,6 @@ impl Parsable for Vec<ParseItem> {
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
-        // println!("{:?}", self);
         ensure!(
             matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == ")"),
             "Missing token ')'"

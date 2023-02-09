@@ -31,6 +31,7 @@ impl fmt::Display for SyntaxNode {
             NodeType::Relation(r) => match r {
                 Relation::Equality => write!(f, "{} = {}", self.children[0], self.children[1]),
                 Relation::Element => write!(f, "{} ∈ {}", self.children[0], self.children[1]),
+                Relation::Subset => write!(f, "{} ⊆ {}", self.children[0], self.children[1]),
             },
             NodeType::Operator(o) => match o {
                 Operator::PowerSet => write!(f, "Pot({})", self.children[0]),

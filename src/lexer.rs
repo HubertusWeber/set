@@ -30,7 +30,7 @@ const CONN: &'static [&'static str] = &[
 ];
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
-const REL: &'static [&'static str] = &["=", "∈", "\\epsilon"];
+const REL: &'static [&'static str] = &["=", "∈", "\\epsilon", "⊆", "\\subseteq"];
 const OP: &'static [&'static str] = &["Pot"];
 const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 
