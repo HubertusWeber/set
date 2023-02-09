@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Token {
     Brack(String),
     Rel(String),
@@ -30,11 +30,11 @@ const CONN: &'static [&'static str] = &[
     "\\leftrightarrow",
 ];
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|"];
+const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str] = &["=", "∈", "\\epsilon", "⊆", "\\subseteq"];
 const UNOP: &'static [&'static str] = &["Pot"];
 const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
-const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
@@ -52,10 +52,15 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
                 continue 'outer;
             }
         }
-
         for x in BRACK {
             if input.starts_with(x) {
                 result.push(Token::Brack(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
+        for x in CONST {
+            if input.starts_with(x) {
+                result.push(Token::Const(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }
@@ -74,12 +79,6 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
         for x in BINOP {
             if input.starts_with(x) {
                 result.push(Token::BinOp(input.drain(..x.len()).collect()));
-                continue 'outer;
-            }
-        }
-        for x in CONST {
-            if input.starts_with(x) {
-                result.push(Token::Const(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }

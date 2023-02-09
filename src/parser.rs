@@ -50,6 +50,9 @@ pub enum Quantifier {
 #[derive(Debug, Clone, Copy)]
 pub enum Operator {
     PowerSet,
+    Union,
+    Intersection,
+    Difference,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -192,14 +195,11 @@ impl Parsable for Vec<ParseItem> {
             matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet))
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
-        ensure!(
-            matches!(self[pos + 1], ParseItem::Token(Token::Rel(..))),
-            "Unexpected token after set"
-        );
+        assert!(matches!(self[pos + 1], ParseItem::Token(Token::Rel(..))),);
         self = self.parse_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
-            "Unexpected second relatum, expected variable, operator, comprehension or empty set"
+            "Unexpected second relatum, expected variable, operation, comprehension or empty set"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
@@ -315,6 +315,10 @@ impl Parsable for Vec<ParseItem> {
             "Unexpected token, expected '('"
         );
         self = self.parse_at(pos + 1)?;
+        ensure!(
+            matches!(&self[pos + 1], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
+            "Unexpected operand, expected variable, operation, comprehension or empty set"
+        );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
             matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ")"),
@@ -331,7 +335,34 @@ impl Parsable for Vec<ParseItem> {
         self.parse_at(pos)
     }
 
-    fn parse_binop_at(self, pos: usize) -> Result<Self> {
-        todo!()
+    fn parse_binop_at(mut self, pos: usize) -> Result<Self> {
+        assert!(
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet))
+        );
+        ensure!(pos + 2 < self.len(), "Unexpected end of input");
+        assert!(matches!(self[pos + 1], ParseItem::Token(Token::BinOp(..))),);
+        match &self[pos + 2] {
+            ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => {
+                self = self.parse_comp_at(pos + 2)?
+            }
+            ParseItem::Token(Token::UnOp(..)) => self = self.parse_unop_at(pos + 2)?,
+            _ => (),
+        };
+        ensure!(
+            matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
+            "Unexpected second operand, expected variable, operation, comprehension or empty set"
+        );
+        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
+        let ParseItem::Token(Token::BinOp(op)) = &self[pos] else {unreachable!()};
+        let entry = match op.as_str() {
+            "∪" | "\\cup" => NodeType::Operator(Operator::Union),
+            "∩" | "\\cap" => NodeType::Operator(Operator::Intersection),
+            "\\" => NodeType::Operator(Operator::Difference),
+            x => unimplemented!("Parser for binary operator '{}' not implemented", x),
+        };
+        let children = vec![left, right];
+        self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        self.parse_at(pos)
     }
 }

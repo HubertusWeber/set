@@ -1,27 +1,5 @@
-use crate::{
-    lexer::Token,
-    parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode},
-};
+use crate::parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode};
 use std::fmt;
-
-impl fmt::Debug for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "\"{}\"",
-            match self {
-                Token::Const(c) => c,
-                Token::Var(v) => v,
-                Token::Brack(b) => b,
-                Token::Rel(r) => r,
-                Token::UnOp(o) => o,
-                Token::BinOp(o) => o,
-                Token::Conn(c) => c,
-                Token::Quan(q) => q,
-            }
-        )
-    }
-}
 
 impl fmt::Display for SyntaxNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -36,6 +14,9 @@ impl fmt::Display for SyntaxNode {
             },
             NodeType::Operator(o) => match o {
                 Operator::PowerSet => write!(f, "Pot({})", self.children[0]),
+                Operator::Union => write!(f, "{} ∪ {}", self.children[0], self.children[1]),
+                Operator::Intersection => write!(f, "{} ∩ {}", self.children[0], self.children[1]),
+                Operator::Difference => write!(f, "{} \\ {}", self.children[0], self.children[1]),
             },
             NodeType::Connective(c) => match c {
                 Connective::Negation => write!(f, "¬{}", self.children[0]),
