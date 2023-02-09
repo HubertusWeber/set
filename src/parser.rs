@@ -79,7 +79,8 @@ where
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
-    fn parse_op_at(self, pos: usize) -> Result<Self>;
+    fn parse_unop_at(self, pos: usize) -> Result<Self>;
+    fn parse_binnop_at(self, pos: usize) -> Result<Self>;
 }
 
 impl Parsable for Vec<ParseItem> {
@@ -162,13 +163,12 @@ impl Parsable for Vec<ParseItem> {
                         | NodeType::Operator(..)
                         | NodeType::Comprehension
                         | NodeType::EmptySet
-                ) =>
+                ) && pos + 1 < self.len() =>
             {
-                if pos + 1 < self.len() && matches!(self[pos + 1], ParseItem::Token(Token::Rel(..)))
-                {
-                    self.parse_rel_at(pos)
-                } else {
-                    Ok(self)
+                match self[pos + 1] {
+                    ParseItem::Token(Token::Rel(..)) => self.parse_rel_at(pos),
+                    ParseItem::Token(Token::BinOp(..)) => self.parse_binnop_at(pos),
+                    _ => Ok(self),
                 }
             }
             ParseItem::SyntaxNode(..) => Ok(self),
@@ -182,7 +182,7 @@ impl Parsable for Vec<ParseItem> {
                 "¬" | "!" | "\\lnot" => self.parse_neg_at(pos),
                 x => unimplemented!("Parser for connective '{}' not implemented", x),
             },
-            ParseItem::Token(Token::Op(..)) => self.parse_op_at(pos),
+            ParseItem::Token(Token::UnOp(..)) => self.parse_unop_at(pos),
             ParseItem::Token(x) => bail!("Unexpected token {:?}", x),
         }
     }
@@ -307,8 +307,8 @@ impl Parsable for Vec<ParseItem> {
         self.parse_at(pos)
     }
 
-    fn parse_op_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self[pos], ParseItem::Token(Token::Op(..))));
+    fn parse_unop_at(mut self, pos: usize) -> Result<Self> {
+        assert!(matches!(self[pos], ParseItem::Token(Token::UnOp(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
             matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(p)) if p == "("),
@@ -321,7 +321,7 @@ impl Parsable for Vec<ParseItem> {
             "Unexpected token, expected ')'"
         );
         let ParseItem::SyntaxNode(operand) = self.remove(pos + 1) else {unreachable!()};
-        let ParseItem::Token(Token::Op(op)) = &self[pos] else {unreachable!()};
+        let ParseItem::Token(Token::UnOp(op)) = &self[pos] else {unreachable!()};
         let entry = match op.as_str() {
             "Pot" => NodeType::Operator(Operator::PowerSet),
             x => unimplemented!("Operator token '{}' not implemented in parser", x),
@@ -329,5 +329,9 @@ impl Parsable for Vec<ParseItem> {
         let children = vec![operand];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
         self.parse_at(pos)
+    }
+
+    fn parse_binnop_at(self, pos: usize) -> Result<Self> {
+        todo!()
     }
 }

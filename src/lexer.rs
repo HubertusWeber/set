@@ -6,7 +6,8 @@ pub enum Token {
     Rel(String),
     Conn(String),
     Quan(String),
-    Op(String),
+    UnOp(String),
+    BinOp(String),
     Var(String),
     Const(String),
 }
@@ -31,7 +32,8 @@ const CONN: &'static [&'static str] = &[
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
 const REL: &'static [&'static str] = &["=", "∈", "\\epsilon", "⊆", "\\subseteq"];
-const OP: &'static [&'static str] = &["Pot"];
+const UNOP: &'static [&'static str] = &["Pot"];
+const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
 const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
@@ -63,9 +65,15 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
                 continue 'outer;
             }
         }
-        for x in OP {
+        for x in UNOP {
             if input.starts_with(x) {
-                result.push(Token::Op(input.drain(..x.len()).collect()));
+                result.push(Token::UnOp(input.drain(..x.len()).collect()));
+                continue 'outer;
+            }
+        }
+        for x in BINOP {
+            if input.starts_with(x) {
+                result.push(Token::BinOp(input.drain(..x.len()).collect()));
                 continue 'outer;
             }
         }

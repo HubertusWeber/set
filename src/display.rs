@@ -14,7 +14,8 @@ impl fmt::Debug for Token {
                 Token::Var(v) => v,
                 Token::Brack(b) => b,
                 Token::Rel(r) => r,
-                Token::Op(o) => o,
+                Token::UnOp(o) => o,
+                Token::BinOp(o) => o,
                 Token::Conn(c) => c,
                 Token::Quan(q) => q,
             }
