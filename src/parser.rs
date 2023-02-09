@@ -22,6 +22,7 @@ pub enum NodeType {
     Operator(Operator),
     Variable(u32),
     Comprehension,
+    PairSet,
     EmptySet,
 }
 
@@ -80,6 +81,7 @@ impl Set for SyntaxNode {
             NodeType::Variable(..)
                 | NodeType::Operator(..)
                 | NodeType::Comprehension
+                | NodeType::PairSet
                 | NodeType::EmptySet
         )
     }
@@ -97,6 +99,8 @@ where
     fn parse_quan_at(self, pos: usize) -> Result<Self>;
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
+    fn parse_curly_at(self, pos: usize) -> Result<Self>;
+    fn parse_pair_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
     fn parse_atom_at(self, pos: usize) -> Result<Self>;
     fn parse_unop_at(self, pos: usize) -> Result<Self>;
@@ -193,9 +197,9 @@ impl Parsable for Vec<ParseItem> {
             }
             ParseItem::SyntaxNode(..) => Ok(self),
             ParseItem::Token(Token::Quan(..)) => self.parse_quan_at(pos),
-            ParseItem::Token(Token::Brack(p)) => match p.as_str() {
+            ParseItem::Token(Token::Brack(b)) => match b.as_str() {
                 "(" => self.parse_conn_at(pos),
-                "{" => self.parse_comp_at(pos),
+                "{" => self.parse_curly_at(pos),
                 x => unimplemented!("Parser for bracket '{}' not implemented", x),
             },
             ParseItem::Token(Token::Conn(c)) => match c.as_str() {
@@ -252,14 +256,14 @@ impl Parsable for Vec<ParseItem> {
     }
 
     fn parse_conn_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(p)) if p == "("));
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(b)) if b == "("));
         ensure!(pos < self.len(), "Unexpected end of input");
         self = self.parse_at(pos)?;
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == ")"),
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(b)) if b == ")"),
             "Missing token ')'"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
@@ -295,24 +299,42 @@ impl Parsable for Vec<ParseItem> {
         Ok(self)
     }
 
-    fn parse_comp_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(c)) if c == "{"));
+    fn parse_curly_at(mut self, pos: usize) -> Result<Self> {
+        assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(b)) if b == "{"));
         ensure!(pos < self.len(), "Unexpected end of input");
         self = self.parse_at(pos)?;
-        ensure!(
-            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
-            "First part of set comprehension must be an element relation"
-        );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
-        ensure!(
-            matches!(&self[pos + 1],ParseItem::Token(Token::Brack(p)) if p == "|"),
-            "Missing token '|' in set comprehension"
-        );
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == "}"),
+            matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(b)) if b == "}"),
             "Missing token '}}'"
+        );
+        match &self[pos + 1] {
+            ParseItem::Token(Token::Brack(b)) if b == "|" => self.parse_comp_at(pos),
+            ParseItem::Token(Token::Brack(b)) if b == "," => self.parse_pair_at(pos),
+            _ => bail!("Unexpected token, expected ',' or '|'"),
+        }
+    }
+
+    fn parse_pair_at(mut self, pos: usize) -> Result<Self> {
+        ensure!(
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if n.is_set())
+                && matches!(&self[pos+ 2], ParseItem::SyntaxNode(n) if n.is_set()),
+            "Pair set must contain two sets"
+        );
+        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
+        let entry = NodeType::PairSet;
+        let children = vec![left, right];
+        self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        self.parse_at(pos)
+    }
+
+    fn parse_comp_at(mut self, pos: usize) -> Result<Self> {
+        ensure!(
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
+            "First part of set comprehension must be an element relation"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
@@ -334,7 +356,7 @@ impl Parsable for Vec<ParseItem> {
         assert!(matches!(self[pos], ParseItem::Token(Token::UnOp(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(p)) if p == "("),
+            matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(b)) if b == "("),
             "Unexpected token, expected '('"
         );
         self = self.parse_atom_at(pos + 1)?;
@@ -344,7 +366,7 @@ impl Parsable for Vec<ParseItem> {
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ")"),
+            matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(b)) if b == ")"),
             "Unexpected token, expected ')'"
         );
         let ParseItem::SyntaxNode(operand) = self.remove(pos + 1) else {unreachable!()};

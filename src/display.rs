@@ -7,6 +7,7 @@ impl fmt::Display for SyntaxNode {
             NodeType::EmptySet => write!(f, "∅"),
             NodeType::Variable(v) => write!(f, "v{}", v),
             NodeType::Comprehension => write!(f, "{{{} | {}}}", self.children[0], self.children[1]),
+            NodeType::PairSet => write!(f, "{{{} , {}}}", self.children[0], self.children[1]),
             NodeType::Relation(r) => match r {
                 Relation::Equality => write!(f, "{} = {}", self.children[0], self.children[1]),
                 Relation::Element => write!(f, "{} ∈ {}", self.children[0], self.children[1]),
