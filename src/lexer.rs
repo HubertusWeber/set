@@ -46,7 +46,8 @@ const CONN: &'static [&'static str] = &[
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|", ","];
 const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset", "ω", "\\omega"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
-const UNOP: &'static [&'static str] = &["Pot"];
+const UNOP: &'static [&'static str] =
+    &["Pot", "Vereinigung", "\\bigcup", "Durchschnitt", "\\bigcap"];
 const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {

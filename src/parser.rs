@@ -54,6 +54,8 @@ pub enum Quantifier {
 #[derive(Debug, Clone, Copy)]
 pub enum Operator {
     PowerSet,
+    BigUnion,
+    BigIntersection,
     Union,
     Intersection,
     Difference,
@@ -374,6 +376,8 @@ impl Parsable for Vec<ParseItem> {
         let ParseItem::Token(Token::UnOp(op)) = &self[pos] else {unreachable!()};
         let entry = match op.as_str() {
             "Pot" => NodeType::Operator(Operator::PowerSet),
+            "Vereinigung" | "\\bigcup" => NodeType::Operator(Operator::BigUnion),
+            "Durchschnitt" | "\\bigcap" => NodeType::Operator(Operator::BigIntersection),
             x => unimplemented!("Operator token '{}' not implemented in parser", x),
         };
         let children = vec![operand];

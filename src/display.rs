@@ -21,6 +21,8 @@ impl fmt::Display for SyntaxNode {
             },
             NodeType::Operator(o) => match o {
                 Operator::PowerSet => write!(f, "Pot({})", self.children[0]),
+                Operator::BigUnion => write!(f, "Vereinigung({})", self.children[0]),
+                Operator::BigIntersection => write!(f, "Durchschnitt({})", self.children[0]),
                 Operator::Union => write!(f, "{} ∪ {}", self.children[0], self.children[1]),
                 Operator::Intersection => write!(f, "{} ∩ {}", self.children[0], self.children[1]),
                 Operator::Difference => write!(f, "{} \\ {}", self.children[0], self.children[1]),
