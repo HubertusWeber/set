@@ -157,7 +157,10 @@ impl Parsable for Vec<ParseItem> {
             ParseItem::SyntaxNode(n)
                 if matches!(
                     n.entry,
-                    NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet
+                    NodeType::Variable(..)
+                        | NodeType::Operator(..)
+                        | NodeType::Comprehension
+                        | NodeType::EmptySet
                 ) =>
             {
                 if pos + 1 < self.len() && matches!(self[pos + 1], ParseItem::Token(Token::Rel(..)))
@@ -185,7 +188,7 @@ impl Parsable for Vec<ParseItem> {
 
     fn parse_rel_at(mut self, pos: usize) -> Result<Self> {
         assert!(
-            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet))
+            matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet))
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
@@ -194,8 +197,8 @@ impl Parsable for Vec<ParseItem> {
         );
         self = self.parse_at(pos + 2)?;
         ensure!(
-            matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Comprehension | NodeType::EmptySet)),
-            "Unexpected second relatum, expected variable, comprehension or empty set"
+            matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
+            "Unexpected second relatum, expected variable, operator, comprehension or empty set"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
@@ -238,6 +241,7 @@ impl Parsable for Vec<ParseItem> {
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
+        // println!("{:?}", self);
         ensure!(
             matches!(self.remove(pos + 3), ParseItem::Token(Token::Brack(p)) if p == ")"),
             "Missing token ')'"
@@ -312,7 +316,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_at(pos + 1)?;
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
-            matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ""),
+            matches!(self.remove(pos + 2), ParseItem::Token(Token::Brack(p)) if p == ")"),
             "Unexpected token, expected ')'"
         );
         let ParseItem::SyntaxNode(operand) = self.remove(pos + 1) else {unreachable!()};
@@ -323,6 +327,6 @@ impl Parsable for Vec<ParseItem> {
         };
         let children = vec![operand];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(self)
+        self.parse_at(pos)
     }
 }
