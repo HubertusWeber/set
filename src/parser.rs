@@ -82,6 +82,7 @@ where
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
+    fn parse_atom_at(self, pos: usize) -> Result<Self>;
     fn parse_unop_at(self, pos: usize) -> Result<Self>;
     fn parse_binop_at(self, pos: usize) -> Result<Self>;
 }
@@ -307,6 +308,14 @@ impl Parsable for Vec<ParseItem> {
         self.parse_at(pos)
     }
 
+    fn parse_atom_at(self, pos: usize) -> Result<Self> {
+        match &self[pos] {
+            ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => self.parse_comp_at(pos + 2),
+            ParseItem::Token(Token::UnOp(..)) => self.parse_unop_at(pos + 2),
+            _ => Ok(self),
+        }
+    }
+
     fn parse_unop_at(mut self, pos: usize) -> Result<Self> {
         assert!(matches!(self[pos], ParseItem::Token(Token::UnOp(..))));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
@@ -314,7 +323,7 @@ impl Parsable for Vec<ParseItem> {
             matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(p)) if p == "("),
             "Unexpected token, expected '('"
         );
-        self = self.parse_at(pos + 1)?;
+        self = self.parse_atom_at(pos + 1)?;
         ensure!(
             matches!(&self[pos + 1], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
             "Unexpected operand, expected variable, operation, comprehension or empty set"
@@ -341,13 +350,7 @@ impl Parsable for Vec<ParseItem> {
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         assert!(matches!(self[pos + 1], ParseItem::Token(Token::BinOp(..))),);
-        match &self[pos + 2] {
-            ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => {
-                self = self.parse_comp_at(pos + 2)?
-            }
-            ParseItem::Token(Token::UnOp(..)) => self = self.parse_unop_at(pos + 2)?,
-            _ => (),
-        };
+        self = self.parse_atom_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Variable(..) | NodeType::Operator(..) | NodeType::Comprehension | NodeType::EmptySet)),
             "Unexpected second operand, expected variable, operation, comprehension or empty set"
