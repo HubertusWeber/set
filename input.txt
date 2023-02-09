@@ -1,1 +1,5 @@
-\forall x (x \epsilon 0 <-> x = Pot(x))
+\forall x (Pot(x) \subseteq 0 <-> x \ x = Pot(x))
+\forall x (Pot(x) \in 0 <-> x = Pot(x))
+\forall x (x \cup y \subseteq 0 <-> 0 \cap y = Pot(x))
+{x \in v4 | x = x} \subseteq {x, y}
+(0 \notin 0 && (0 \neq \omega && x \nsubseteq \bigcup(0)))
