@@ -1,10 +1,13 @@
-use crate::parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode};
+use crate::parser::{Connective, Constant, NodeType, Operator, Quantifier, Relation, SyntaxNode};
 use std::fmt;
 
 impl fmt::Display for SyntaxNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.entry {
-            NodeType::EmptySet => write!(f, "∅"),
+            NodeType::Constant(c) => match c {
+                Constant::EmptySet => write!(f, "∅"),
+                Constant::Omega => write!(f, "ω"),
+            },
             NodeType::Variable(v) => write!(f, "v{}", v),
             NodeType::Comprehension => write!(f, "{{{} | {}}}", self.children[0], self.children[1]),
             NodeType::PairSet => write!(f, "{{{} , {}}}", self.children[0], self.children[1]),

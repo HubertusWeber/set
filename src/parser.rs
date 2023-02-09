@@ -21,9 +21,9 @@ pub enum NodeType {
     Quantifier(Quantifier),
     Operator(Operator),
     Variable(u32),
+    Constant(Constant),
     Comprehension,
     PairSet,
-    EmptySet,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -60,9 +60,9 @@ pub enum Operator {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Depth {
-    val: usize,
-    pos: usize,
+pub enum Constant {
+    EmptySet,
+    Omega,
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
@@ -82,10 +82,10 @@ impl Set for SyntaxNode {
         matches!(
             self.entry,
             NodeType::Variable(..)
+                | NodeType::Constant(..)
                 | NodeType::Operator(..)
                 | NodeType::Comprehension
                 | NodeType::PairSet
-                | NodeType::EmptySet
         )
     }
 }
@@ -123,7 +123,12 @@ impl Parsable for Vec<ParseItem> {
             .map(|i| match i {
                 ParseItem::Token(Token::Const(c)) => match c.as_str() {
                     "0" | "∅" | "\\emptyset" => {
-                        let entry = NodeType::EmptySet;
+                        let entry = NodeType::Constant(Constant::EmptySet);
+                        let children = vec![];
+                        ParseItem::SyntaxNode(SyntaxNode { entry, children })
+                    }
+                    "ω" | "\\omega" => {
+                        let entry = NodeType::Constant(Constant::Omega);
                         let children = vec![];
                         ParseItem::SyntaxNode(SyntaxNode { entry, children })
                     }
@@ -183,21 +188,11 @@ impl Parsable for Vec<ParseItem> {
     fn parse_at(self, pos: usize) -> Result<Self> {
         ensure!(pos < self.len(), "Unexpected end of input");
         match &self[pos] {
-            ParseItem::SyntaxNode(n)
-                if matches!(
-                    n.entry,
-                    NodeType::Variable(..)
-                        | NodeType::Operator(..)
-                        | NodeType::Comprehension
-                        | NodeType::EmptySet
-                ) && pos + 1 < self.len() =>
-            {
-                match self[pos + 1] {
-                    ParseItem::Token(Token::Rel(..)) => self.parse_rel_at(pos),
-                    ParseItem::Token(Token::BinOp(..)) => self.parse_binop_at(pos),
-                    _ => Ok(self),
-                }
-            }
+            ParseItem::SyntaxNode(n) if n.is_set() && pos + 1 < self.len() => match self[pos + 1] {
+                ParseItem::Token(Token::Rel(..)) => self.parse_rel_at(pos),
+                ParseItem::Token(Token::BinOp(..)) => self.parse_binop_at(pos),
+                _ => Ok(self),
+            },
             ParseItem::SyntaxNode(..) => Ok(self),
             ParseItem::Token(Token::Quan(..)) => self.parse_quan_at(pos),
             ParseItem::Token(Token::Brack(b)) => match b.as_str() {
@@ -221,7 +216,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if n.is_set()),
-            "Unexpected second relatum, expected variable, operation, comprehension or empty set"
+            "Unexpected second relatum, expected constant, variable, operation or comprehension"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
@@ -368,7 +363,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_atom_at(pos + 1)?;
         ensure!(
             matches!(&self[pos + 1], ParseItem::SyntaxNode(n) if n.is_set()),
-            "Unexpected operand, expected variable, operation, comprehension or empty set"
+            "Unexpected second relatum, expected constant, variable, operation or comprehension"
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
@@ -393,7 +388,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_atom_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if n.is_set()),
-            "Unexpected second operand, expected variable, operation, comprehension or empty set"
+            "Unexpected second relatum, expected constant, variable, operation or comprehension"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};

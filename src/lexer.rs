@@ -44,7 +44,7 @@ const CONN: &'static [&'static str] = &[
     "\\leftrightarrow",
 ];
 const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|", ","];
-const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset"];
+const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset", "ω", "\\omega"];
 const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
 const UNOP: &'static [&'static str] = &["Pot"];
 const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
