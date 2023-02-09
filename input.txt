@@ -1,0 +1,1 @@
+\forall x (x \epsilon 0 <-> x = Pot(x))
