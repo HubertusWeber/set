@@ -75,11 +75,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
         .parse()
 }
 
-trait Set {
-    fn is_set(&self) -> bool;
-}
-
-impl Set for SyntaxNode {
+impl SyntaxNode {
     fn is_set(&self) -> bool {
         matches!(
             self.entry,
