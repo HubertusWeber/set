@@ -33,7 +33,7 @@ impl SyntaxNode {
             self.children.push(child);
         }
         match self.entry {
-            NodeType::Relation(r) if matches!(r, Relation::Subset) => {
+            NodeType::Relation(Relation::Subset) => {
                 let var = self.get_free_vars(1).remove(0);
                 let antecedent = SyntaxNode {
                     entry: NodeType::Relation(Relation::Element),
@@ -58,7 +58,7 @@ impl SyntaxNode {
 
     fn operators(mut self) -> Self {
         match self.entry {
-            NodeType::Relation(r) if matches!(r, Relation::Equality) => {
+            NodeType::Relation(Relation::Equality) => {
                 if matches!(
                     self.children[0].entry,
                     NodeType::Operator(Operator::PowerSet)
@@ -78,7 +78,7 @@ impl SyntaxNode {
                     self = self.ext();
                 }
             }
-            NodeType::Relation(r) if matches!(r, Relation::Element) => {
+            NodeType::Relation(Relation::Element) => {
                 match self.children[1].entry {
                     NodeType::Operator(Operator::PowerSet) => {
                         let var = self.get_free_vars(1).remove(0);
