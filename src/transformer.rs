@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use crate::parser::{Connective, NodeType, Quantifier, Relation, SyntaxNode};
+use crate::parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode};
 
 impl SyntaxNode {
     pub fn transform(self) -> Self {
-        self.negated_relation().subset()
+        self.negated_relation().subset().powerset()
     }
 
     fn negated_relation(mut self) -> Self {
@@ -34,11 +34,7 @@ impl SyntaxNode {
         }
         match self.entry {
             NodeType::Relation(r) if matches!(r, Relation::Subset) => {
-                let index = self.get_free_vars(1)[0];
-                let var = SyntaxNode {
-                    entry: NodeType::Variable(index),
-                    children: vec![],
-                };
+                let var = self.get_free_vars(1).remove(0);
                 let antecedent = SyntaxNode {
                     entry: NodeType::Relation(Relation::Element),
                     children: vec![var.clone(), self.children.remove(0)],
@@ -60,14 +56,194 @@ impl SyntaxNode {
         self
     }
 
-    fn get_free_vars(&self, count: usize) -> Vec<u32> {
-        let mut result = Vec::<u32>::new();
+    fn powerset(mut self) -> Self {
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).powerset();
+            self.children.push(child);
+        }
+        if matches!(self.entry, NodeType::Relation(Relation::Equality))
+            && matches!(
+                self.children[0].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            self.phi_t().powerset()
+        } else if matches!(self.entry, NodeType::Relation(Relation::Equality))
+            && matches!(
+                self.children[1].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            self.children.swap(0, 1);
+            self.phi_t().powerset()
+        } else if matches!(self.entry, NodeType::Relation(Relation::Element))
+            && matches!(
+                self.children[0].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            let var = self.get_free_vars(1).remove(0);
+            let right = self.children.remove(1);
+            let left = self.children.remove(0);
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![left, var.clone()],
+            }
+            .phi_t();
+            let element = SyntaxNode {
+                entry: NodeType::Relation(Relation::Element),
+                children: vec![var.clone(), right],
+            };
+            let conjunction = SyntaxNode {
+                entry: NodeType::Connective(Connective::Conjunction),
+                children: vec![equality, element],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Existential);
+            self.children.push(var);
+            self.children.push(conjunction);
+            self.powerset()
+        } else if matches!(self.entry, NodeType::Relation(Relation::Element))
+            && matches!(
+                self.children[1].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            let var = self.get_free_vars(1).remove(0);
+            let right = self.children.remove(1);
+            let left = self.children.remove(0);
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![right, var.clone()],
+            }
+            .phi_t();
+            let element = SyntaxNode {
+                entry: NodeType::Relation(Relation::Element),
+                children: vec![left, var.clone()],
+            };
+            let conjunction = SyntaxNode {
+                entry: NodeType::Connective(Connective::Conjunction),
+                children: vec![equality, element],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Existential);
+            self.children.push(var);
+            self.children.push(conjunction);
+            self.powerset()
+        } else if matches!(self.entry, NodeType::Operator(o) if o.is_unary())
+            && matches!(
+                self.children[0].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            let var = self.get_free_vars(1).remove(0);
+            let child = self.children.remove(0);
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![child, var.clone()],
+            }
+            .phi_t();
+            let operator = SyntaxNode {
+                entry: self.entry,
+                children: vec![var.clone()],
+            };
+            let conjunction = SyntaxNode {
+                entry: NodeType::Connective(Connective::Conjunction),
+                children: vec![equality, operator],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Existential);
+            self.children.push(var);
+            self.children.push(conjunction);
+            self
+        } else if matches!(self.entry, NodeType::Operator(o) if o.is_binary())
+            && matches!(
+                self.children[0].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            let var = self.get_free_vars(1).remove(0);
+            let right = self.children.remove(1);
+            let left = self.children.remove(0);
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![left, var.clone()],
+            }
+            .phi_t();
+            let operator = SyntaxNode {
+                entry: self.entry,
+                children: vec![var.clone(), right],
+            };
+            let conjunction = SyntaxNode {
+                entry: NodeType::Connective(Connective::Conjunction),
+                children: vec![equality, operator],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Existential);
+            self.children.push(var);
+            self.children.push(conjunction);
+            self.powerset()
+        } else if matches!(self.entry, NodeType::Operator(o) if o.is_binary())
+            && matches!(
+                self.children[0].entry,
+                NodeType::Operator(Operator::PowerSet)
+            )
+        {
+            let var = self.get_free_vars(1).remove(0);
+            let right = self.children.remove(1);
+            let left = self.children.remove(0);
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![right, var.clone()],
+            }
+            .phi_t();
+            let operator = SyntaxNode {
+                entry: self.entry,
+                children: vec![left, var.clone()],
+            };
+            let conjunction = SyntaxNode {
+                entry: NodeType::Connective(Connective::Conjunction),
+                children: vec![equality, operator],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Existential);
+            self.children.push(var);
+            self.children.push(conjunction);
+            self.powerset()
+        } else {
+            self
+        }
+    }
+
+    fn phi_t(mut self) -> Self {
+        let var = self.get_free_vars(1).remove(0);
+        let right = self.children.remove(1);
+        let mut left = self.children.remove(0);
+        let element = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right],
+        };
+        let subset = SyntaxNode {
+            entry: NodeType::Relation(Relation::Subset),
+            children: vec![var.clone(), left.children.remove(0)],
+        }
+        .subset();
+        let biconditional = SyntaxNode {
+            entry: NodeType::Connective(Connective::Biconditional),
+            children: vec![element, subset],
+        };
+        self.entry = NodeType::Quantifier(Quantifier::Existential);
+        self.children.push(var);
+        self.children.push(biconditional);
+        self
+    }
+
+    fn get_free_vars(&self, count: usize) -> Vec<SyntaxNode> {
+        let mut result = Vec::<SyntaxNode>::new();
         let used_indices = self.collect_used_indices(HashSet::<u32>::new());
         let mut n = 0..;
         while result.len() < count {
             let index = n.next().unwrap();
             if !used_indices.contains(&index) {
-                result.push(index);
+                result.push(SyntaxNode {
+                    entry: NodeType::Variable(index),
+                    children: vec![],
+                });
             }
         }
         result
