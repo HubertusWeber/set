@@ -361,14 +361,18 @@ impl Parsable for Vec<ParseItem> {
 
     fn parse_atom_at(self, pos: usize) -> Result<Self> {
         match &self[pos] {
-            ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => self.parse_comp_at(pos + 2),
-            ParseItem::Token(Token::UnOp(..)) => self.parse_unop_at(pos + 2),
+            ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => self.parse_curly_at(pos),
+            ParseItem::Token(Token::UnOp(..)) => self.parse_unop_at(pos),
             _ => Ok(self),
         }
     }
 
     fn parse_unop_at(mut self, pos: usize) -> Result<Self> {
-        assert!(matches!(self[pos], ParseItem::Token(Token::UnOp(..))));
+        assert!(
+            matches!(self[pos], ParseItem::Token(Token::UnOp(..))),
+            "{:?}",
+            self[pos]
+        );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
             matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(b)) if b == "("),
