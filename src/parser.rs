@@ -118,7 +118,7 @@ where
     fn parse_curly_at(self, pos: usize) -> Result<Self>;
     fn parse_pair_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
-    fn parse_atom_at(self, pos: usize) -> Result<Self>;
+    fn parse_set_at(self, pos: usize) -> Result<Self>;
     fn parse_unop_at(self, pos: usize) -> Result<Self>;
     fn parse_binop_at(self, pos: usize) -> Result<Self>;
 }
@@ -358,10 +358,17 @@ impl Parsable for Vec<ParseItem> {
         self.parse_at(pos)
     }
 
-    fn parse_atom_at(self, pos: usize) -> Result<Self> {
+    fn parse_set_at(self, pos: usize) -> Result<Self> {
         match &self[pos] {
             ParseItem::Token(Token::Brack(b)) if b.as_str() == "{" => self.parse_curly_at(pos),
             ParseItem::Token(Token::UnOp(..)) => self.parse_unop_at(pos),
+            ParseItem::SyntaxNode(n)
+                if n.is_set()
+                    && pos + 1 < self.len()
+                    && matches!(self[pos + 1], ParseItem::Token(Token::BinOp(..))) =>
+            {
+                self.parse_binop_at(pos)
+            }
             _ => Ok(self),
         }
     }
@@ -377,7 +384,7 @@ impl Parsable for Vec<ParseItem> {
             matches!(self.remove(pos + 1), ParseItem::Token(Token::Brack(b)) if b == "("),
             "Unexpected token, expected '('"
         );
-        self = self.parse_atom_at(pos + 1)?;
+        self = self.parse_set_at(pos + 1)?;
         ensure!(
             matches!(&self[pos + 1], ParseItem::SyntaxNode(n) if n.is_set()),
             "Unexpected second relatum, expected constant, variable, operation or comprehension"
@@ -404,7 +411,7 @@ impl Parsable for Vec<ParseItem> {
         assert!(matches!(&self[pos], ParseItem::SyntaxNode(n) if n.is_set()));
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         assert!(matches!(self[pos + 1], ParseItem::Token(Token::BinOp(..))),);
-        self = self.parse_atom_at(pos + 2)?;
+        self = self.parse_set_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if n.is_set()),
             "Unexpected second relatum, expected constant, variable, operation or comprehension"
