@@ -4,7 +4,7 @@ use crate::parser::{Connective, NodeType, Operator, Quantifier, Relation, Syntax
 
 impl SyntaxNode {
     pub fn transform(self) -> Self {
-        self.negated_relation().subset().powerset()
+        self.negated_relation().subset().operators()
     }
 
     fn negated_relation(mut self) -> Self {
@@ -56,161 +56,124 @@ impl SyntaxNode {
         self
     }
 
-    fn powerset(mut self) -> Self {
+    fn operators(mut self) -> Self {
+        match self.entry {
+            NodeType::Relation(r) if matches!(r, Relation::Equality) => {
+                if matches!(
+                    self.children[0].entry,
+                    NodeType::Operator(Operator::PowerSet)
+                ) {
+                    self = self.phi_powerset();
+                }
+                if matches!(
+                    self.children[1].entry,
+                    NodeType::Operator(Operator::PowerSet)
+                ) {
+                    self.children.swap(0, 1);
+                    self = self.phi_powerset();
+                }
+                if matches!(self.children[0].entry, NodeType::Operator(o) if !matches!(o, Operator::PowerSet) )
+                    || matches!(self.children[1].entry, NodeType::Operator(o) if !matches!(o, Operator::PowerSet) )
+                {
+                    self = self.ext();
+                }
+            }
+            NodeType::Relation(r) if matches!(r, Relation::Element) => {
+                match self.children[1].entry {
+                    NodeType::Operator(Operator::PowerSet) => {
+                        let var = self.get_free_vars(1).remove(0);
+                        let right = self.children.remove(1);
+                        let left = self.children.remove(0);
+                        let equality = SyntaxNode {
+                            entry: NodeType::Relation(Relation::Equality),
+                            children: vec![right, var.clone()],
+                        }
+                        .phi_powerset();
+                        let element = SyntaxNode {
+                            entry: NodeType::Relation(Relation::Element),
+                            children: vec![left, var.clone()],
+                        };
+                        let conjunction = SyntaxNode {
+                            entry: NodeType::Connective(Connective::Conjunction),
+                            children: vec![equality, element],
+                        };
+                        self.entry = NodeType::Quantifier(Quantifier::Existential);
+                        self.children.push(var);
+                        self.children.push(conjunction);
+                    }
+                    NodeType::Operator(Operator::BigIntersection) => {
+                        self = self.phi_big_intersection();
+                    }
+                    NodeType::Operator(Operator::BigUnion) => {
+                        self = self.phi_big_union();
+                    }
+                    NodeType::Operator(Operator::Intersection) => {
+                        self = self.phi_intersection();
+                    }
+                    NodeType::Operator(Operator::Difference) => {
+                        self = self.phi_difference();
+                    }
+                    NodeType::Operator(Operator::Union) => {
+                        self = self.phi_union();
+                    }
+                    NodeType::Operator(Operator::PairSet) => {
+                        self = self.phi_pair_set();
+                    }
+                    _ => (),
+                }
+                if matches!(self.children[0].entry, NodeType::Operator(..)) {
+                    let var = self.get_free_vars(1).remove(0);
+                    let right = self.children.remove(1);
+                    let left = self.children.remove(0);
+                    let equality = SyntaxNode {
+                        entry: NodeType::Relation(Relation::Equality),
+                        children: vec![left, var.clone()],
+                    };
+                    let element = SyntaxNode {
+                        entry: NodeType::Relation(Relation::Element),
+                        children: vec![var.clone(), right],
+                    };
+                    let conjunction = SyntaxNode {
+                        entry: NodeType::Connective(Connective::Conjunction),
+                        children: vec![equality, element],
+                    };
+                    self.entry = NodeType::Quantifier(Quantifier::Existential);
+                    self.children.push(var);
+                    self.children.push(conjunction);
+                }
+            }
+            _ => (),
+        }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).powerset();
+            let child = self.children.remove(0).operators();
             self.children.push(child);
         }
-        if matches!(self.entry, NodeType::Relation(Relation::Equality))
-            && matches!(
-                self.children[0].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            self.phi_t().powerset()
-        } else if matches!(self.entry, NodeType::Relation(Relation::Equality))
-            && matches!(
-                self.children[1].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            self.children.swap(0, 1);
-            self.phi_t().powerset()
-        } else if matches!(self.entry, NodeType::Relation(Relation::Element))
-            && matches!(
-                self.children[0].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            let var = self.get_free_vars(1).remove(0);
-            let right = self.children.remove(1);
-            let left = self.children.remove(0);
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![left, var.clone()],
-            }
-            .phi_t();
-            let element = SyntaxNode {
-                entry: NodeType::Relation(Relation::Element),
-                children: vec![var.clone(), right],
-            };
-            let conjunction = SyntaxNode {
-                entry: NodeType::Connective(Connective::Conjunction),
-                children: vec![equality, element],
-            };
-            self.entry = NodeType::Quantifier(Quantifier::Existential);
-            self.children.push(var);
-            self.children.push(conjunction);
-            self.powerset()
-        } else if matches!(self.entry, NodeType::Relation(Relation::Element))
-            && matches!(
-                self.children[1].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            let var = self.get_free_vars(1).remove(0);
-            let right = self.children.remove(1);
-            let left = self.children.remove(0);
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![right, var.clone()],
-            }
-            .phi_t();
-            let element = SyntaxNode {
-                entry: NodeType::Relation(Relation::Element),
-                children: vec![left, var.clone()],
-            };
-            let conjunction = SyntaxNode {
-                entry: NodeType::Connective(Connective::Conjunction),
-                children: vec![equality, element],
-            };
-            self.entry = NodeType::Quantifier(Quantifier::Existential);
-            self.children.push(var);
-            self.children.push(conjunction);
-            self.powerset()
-        } else if matches!(self.entry, NodeType::Operator(o) if o.is_unary())
-            && matches!(
-                self.children[0].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            let var = self.get_free_vars(1).remove(0);
-            let child = self.children.remove(0);
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![child, var.clone()],
-            }
-            .phi_t();
-            let operator = SyntaxNode {
-                entry: self.entry,
-                children: vec![var.clone()],
-            };
-            let conjunction = SyntaxNode {
-                entry: NodeType::Connective(Connective::Conjunction),
-                children: vec![equality, operator],
-            };
-            self.entry = NodeType::Quantifier(Quantifier::Existential);
-            self.children.push(var);
-            self.children.push(conjunction);
-            self
-        } else if matches!(self.entry, NodeType::Operator(o) if o.is_binary())
-            && matches!(
-                self.children[0].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            let var = self.get_free_vars(1).remove(0);
-            let right = self.children.remove(1);
-            let left = self.children.remove(0);
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![left, var.clone()],
-            }
-            .phi_t();
-            let operator = SyntaxNode {
-                entry: self.entry,
-                children: vec![var.clone(), right],
-            };
-            let conjunction = SyntaxNode {
-                entry: NodeType::Connective(Connective::Conjunction),
-                children: vec![equality, operator],
-            };
-            self.entry = NodeType::Quantifier(Quantifier::Existential);
-            self.children.push(var);
-            self.children.push(conjunction);
-            self.powerset()
-        } else if matches!(self.entry, NodeType::Operator(o) if o.is_binary())
-            && matches!(
-                self.children[0].entry,
-                NodeType::Operator(Operator::PowerSet)
-            )
-        {
-            let var = self.get_free_vars(1).remove(0);
-            let right = self.children.remove(1);
-            let left = self.children.remove(0);
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![right, var.clone()],
-            }
-            .phi_t();
-            let operator = SyntaxNode {
-                entry: self.entry,
-                children: vec![left, var.clone()],
-            };
-            let conjunction = SyntaxNode {
-                entry: NodeType::Connective(Connective::Conjunction),
-                children: vec![equality, operator],
-            };
-            self.entry = NodeType::Quantifier(Quantifier::Existential);
-            self.children.push(var);
-            self.children.push(conjunction);
-            self.powerset()
-        } else {
-            self
-        }
+        self
     }
 
-    fn phi_t(mut self) -> Self {
+    fn ext(mut self) -> Self {
+        let var = self.get_free_vars(1).remove(0);
+        let right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), left],
+        };
+        let biconditional = SyntaxNode {
+            entry: NodeType::Connective(Connective::Biconditional),
+            children: vec![element_left, element_right],
+        };
+        self.entry = NodeType::Quantifier(Quantifier::Universal);
+        self.children.push(var);
+        self.children.push(biconditional);
+        self
+    }
+
+    fn phi_powerset(mut self) -> Self {
         let var = self.get_free_vars(1).remove(0);
         let right = self.children.remove(1);
         let mut left = self.children.remove(0);
@@ -230,6 +193,122 @@ impl SyntaxNode {
         self.entry = NodeType::Quantifier(Quantifier::Existential);
         self.children.push(var);
         self.children.push(biconditional);
+        self
+    }
+
+    fn phi_big_intersection(mut self) -> Self {
+        let var = self.get_free_vars(1).remove(0);
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left, var.clone()],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right.children.remove(0)],
+        };
+        let implication = SyntaxNode {
+            entry: NodeType::Connective(Connective::Implication),
+            children: vec![element_left, element_right],
+        };
+        self.entry = NodeType::Quantifier(Quantifier::Universal);
+        self.children.push(var);
+        self.children.push(implication);
+        self
+    }
+
+    fn phi_big_union(mut self) -> Self {
+        let var = self.get_free_vars(1).remove(0);
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left, var.clone()],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right.children.remove(0)],
+        };
+        let implication = SyntaxNode {
+            entry: NodeType::Connective(Connective::Implication),
+            children: vec![element_left, element_right],
+        };
+        self.entry = NodeType::Quantifier(Quantifier::Existential);
+        self.children.push(var);
+        self.children.push(implication);
+        self
+    }
+
+    fn phi_intersection(mut self) -> Self {
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left.clone(), right.children.remove(1)],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left, right.children.remove(0)],
+        };
+        self.entry = NodeType::Connective(Connective::Conjunction);
+        self.children.push(element_left);
+        self.children.push(element_right);
+        self
+    }
+
+    fn phi_difference(mut self) -> Self {
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left.clone(), right.children.remove(1)],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left, right.children.remove(0)],
+        };
+        let negation = SyntaxNode {
+            entry: NodeType::Connective(Connective::Negation),
+            children: vec![element_right],
+        };
+        self.entry = NodeType::Connective(Connective::Conjunction);
+        self.children.push(element_left);
+        self.children.push(negation);
+        self
+    }
+
+    fn phi_union(mut self) -> Self {
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left.clone(), right.children.remove(1)],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![left, right.children.remove(0)],
+        };
+        self.entry = NodeType::Connective(Connective::Disjunction);
+        self.children.push(element_left);
+        self.children.push(element_right);
+        self
+    }
+
+    fn phi_pair_set(mut self) -> Self {
+        let mut right = self.children.remove(1);
+        let left = self.children.remove(0);
+        let equality_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Equality),
+            children: vec![left.clone(), right.children.remove(1)],
+        };
+        let equality_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Equality),
+            children: vec![left, right.children.remove(0)],
+        };
+        self.entry = NodeType::Connective(Connective::Disjunction);
+        self.children.push(equality_left);
+        self.children.push(equality_right);
         self
     }
 
