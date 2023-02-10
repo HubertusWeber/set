@@ -23,7 +23,6 @@ pub enum NodeType {
     Variable(u32),
     Constant(Constant),
     Comprehension,
-    PairSet,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -59,6 +58,7 @@ pub enum Operator {
     Union,
     Intersection,
     Difference,
+    PairSet,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -86,7 +86,7 @@ impl Operator {
     pub fn is_binary(&self) -> bool {
         matches!(
             self,
-            Operator::Union | Operator::Difference | Operator::Intersection
+            Operator::Union | Operator::Difference | Operator::Intersection | Operator::PairSet
         )
     }
 }
@@ -99,7 +99,6 @@ impl SyntaxNode {
                 | NodeType::Constant(..)
                 | NodeType::Operator(..)
                 | NodeType::Comprehension
-                | NodeType::PairSet
         )
     }
 }
@@ -340,7 +339,7 @@ impl Parsable for Vec<ParseItem> {
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
-        let entry = NodeType::PairSet;
+        let entry = NodeType::Operator(Operator::PairSet);
         let children = vec![left, right];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
         self.parse_at(pos)
