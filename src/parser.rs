@@ -75,22 +75,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
         .parse()
 }
 
-impl Operator {
-    pub fn is_unary(&self) -> bool {
-        matches!(
-            self,
-            Operator::PowerSet | Operator::BigUnion | Operator::BigIntersection
-        )
-    }
-
-    pub fn is_binary(&self) -> bool {
-        matches!(
-            self,
-            Operator::Union | Operator::Difference | Operator::Intersection | Operator::PairSet
-        )
-    }
-}
-
 impl SyntaxNode {
     fn is_set(&self) -> bool {
         matches!(
