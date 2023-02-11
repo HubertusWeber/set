@@ -8,7 +8,25 @@ impl fmt::Display for SyntaxNode {
                 Constant::EmptySet => write!(f, "∅"),
                 Constant::Omega => write!(f, "ω"),
             },
-            NodeType::Variable(v) => write!(f, "v{}", v),
+            NodeType::Variable(v) => {
+                let mut var = String::from("v");
+                for c in v.to_string().chars() {
+                    match c {
+                        '0' => var.push_str("₀"),
+                        '1' => var.push_str("₁"),
+                        '2' => var.push_str("₂"),
+                        '3' => var.push_str("₃"),
+                        '4' => var.push_str("₄"),
+                        '5' => var.push_str("₅"),
+                        '6' => var.push_str("₆"),
+                        '7' => var.push_str("₇"),
+                        '8' => var.push_str("₈"),
+                        '9' => var.push_str("₉"),
+                        _ => (),
+                    }
+                }
+                write!(f, "{}", var)
+            }
             NodeType::Comprehension => write!(f, "{{{} | {}}}", self.children[0], self.children[1]),
             NodeType::Relation(r) => match r {
                 Relation::Equality => write!(f, "{} = {}", self.children[0], self.children[1]),
