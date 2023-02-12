@@ -297,7 +297,7 @@ impl Parsable for Vec<ParseItem> {
         let entry = NodeType::Operator(Operator::Singleton);
         let children = vec![child];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
-        Ok(self)
+        self.parse_at(pos)
     }
 
     fn parse_pair_at(mut self, pos: usize) -> Result<Self> {
