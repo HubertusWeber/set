@@ -6,7 +6,8 @@ mod transformer;
 #[derive(Clone, Copy)]
 pub struct SetConfig {
     pub variables: bool,
-    pub constants: bool,
+    pub empty_set: bool,
+    pub omega: bool,
     pub negated_relations: bool,
     pub subset: bool,
     pub singleton: bool,
