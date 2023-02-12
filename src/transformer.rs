@@ -138,11 +138,11 @@ impl SyntaxNode {
         match self.entry {
             NodeType::Relation(Relation::Equality) => {
                 if matches!(self.children[0].entry, NodeType::Comprehension) {
-                    self = self.phi_comprehension().subset(config);
+                    self = self.phi_comprehension();
                 }
                 if matches!(self.children[1].entry, NodeType::Comprehension) {
                     self.children.swap(0, 1);
-                    self = self.phi_comprehension().subset(config);
+                    self = self.phi_comprehension();
                 }
             }
             NodeType::Relation(Relation::Element) => {
@@ -366,22 +366,28 @@ impl SyntaxNode {
     }
 
     fn phi_comprehension(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
         let right = self.children.remove(1);
         let mut left = self.children.remove(0);
-        let element = SyntaxNode {
+        let phi = left.children.remove(1);
+        let mut spec = left.children.remove(0);
+        let var = spec.children.remove(0);
+        let element_left = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
             children: vec![var.clone(), right],
         };
-        let subset = SyntaxNode {
-            entry: NodeType::Relation(Relation::Subset),
-            children: vec![var.clone(), left.children.remove(0)],
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), spec.children.remove(0)],
+        };
+        let conjunction = SyntaxNode {
+            entry: NodeType::Connective(Connective::Conjunction),
+            children: vec![element_right, phi],
         };
         let biconditional = SyntaxNode {
             entry: NodeType::Connective(Connective::Biconditional),
-            children: vec![element, subset],
+            children: vec![element_left, conjunction],
         };
-        self.entry = NodeType::Quantifier(Quantifier::Existential);
+        self.entry = NodeType::Quantifier(Quantifier::Universal);
         self.children.push(var);
         self.children.push(biconditional);
         self
