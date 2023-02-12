@@ -51,6 +51,7 @@ pub enum Quantifier {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Operator {
+    Singleton,
     PowerSet,
     BigUnion,
     BigIntersection,
@@ -99,6 +100,7 @@ where
     fn parse_conn_at(self, pos: usize) -> Result<Self>;
     fn parse_neg_at(self, pos: usize) -> Result<Self>;
     fn parse_curly_at(self, pos: usize) -> Result<Self>;
+    fn parse_singleton_at(self, pos: usize) -> Result<Self>;
     fn parse_pair_at(self, pos: usize) -> Result<Self>;
     fn parse_comp_at(self, pos: usize) -> Result<Self>;
     fn parse_set_at(self, pos: usize) -> Result<Self>;
@@ -272,6 +274,10 @@ impl Parsable for Vec<ParseItem> {
         assert!(matches!(self.remove(pos), ParseItem::Token(Token::Brack(b)) if b == "{"));
         ensure!(pos < self.len(), "Unexpected end of input");
         self = self.parse_at(pos)?;
+        ensure!(pos + 1 < self.len(), "Unexpected end of input");
+        if matches!(&self[pos+1], ParseItem::Token(Token::Brack(b)) if b == "}") {
+            return self.parse_singleton_at(pos);
+        }
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         self = self.parse_at(pos + 2)?;
         ensure!(pos + 3 < self.len(), "Unexpected end of input");
@@ -284,6 +290,14 @@ impl Parsable for Vec<ParseItem> {
             ParseItem::Token(Token::Brack(b)) if b == "," => self.parse_pair_at(pos),
             _ => bail!("Unexpected token, expected ',' or '|'"),
         }
+    }
+
+    fn parse_singleton_at(mut self, pos: usize) -> Result<Self> {
+        let ParseItem::SyntaxNode(child) = self.remove(pos) else {unreachable!()};
+        let entry = NodeType::Operator(Operator::Singleton);
+        let children = vec![child];
+        self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
+        Ok(self)
     }
 
     fn parse_pair_at(mut self, pos: usize) -> Result<Self> {

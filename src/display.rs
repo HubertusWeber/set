@@ -44,6 +44,7 @@ impl fmt::Display for SyntaxNode {
                 Relation::NotSubset => write!(f, "{} ⊈ {}", self.children[0], self.children[1]),
             },
             NodeType::Operator(o) => match o {
+                Operator::Singleton => write!(f, "{{{}}}", self.children[0]),
                 Operator::PowerSet => write!(f, "Pot({})", self.children[0]),
                 Operator::BigUnion => write!(f, "Vereinigung({})", self.children[0]),
                 Operator::BigIntersection => write!(f, "Durchschnitt({})", self.children[0]),
