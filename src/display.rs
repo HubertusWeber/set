@@ -9,23 +9,30 @@ impl fmt::Display for SyntaxNode {
                 Constant::Omega => write!(f, "ω"),
             },
             NodeType::Variable(v) => {
-                let mut var = String::from("v");
-                for c in v.to_string().chars() {
-                    match c {
-                        '0' => var.push_str("₀"),
-                        '1' => var.push_str("₁"),
-                        '2' => var.push_str("₂"),
-                        '3' => var.push_str("₃"),
-                        '4' => var.push_str("₄"),
-                        '5' => var.push_str("₅"),
-                        '6' => var.push_str("₆"),
-                        '7' => var.push_str("₇"),
-                        '8' => var.push_str("₈"),
-                        '9' => var.push_str("₉"),
-                        _ => (),
+                if (v < u32::MAX - 55 && v > u32::MAX - 91)
+                    || (v < u32::MAX - 96 && v > u32::MAX - 123)
+                {
+                    let ascii = char::from_u32(u32::MAX - v).unwrap();
+                    write!(f, "{}", ascii)
+                } else {
+                    let mut var = String::from("v");
+                    for c in v.to_string().chars() {
+                        match c {
+                            '0' => var.push_str("₀"),
+                            '1' => var.push_str("₁"),
+                            '2' => var.push_str("₂"),
+                            '3' => var.push_str("₃"),
+                            '4' => var.push_str("₄"),
+                            '5' => var.push_str("₅"),
+                            '6' => var.push_str("₆"),
+                            '7' => var.push_str("₇"),
+                            '8' => var.push_str("₈"),
+                            '9' => var.push_str("₉"),
+                            _ => (),
+                        }
                     }
+                    write!(f, "{}", var)
                 }
-                write!(f, "{}", var)
             }
             NodeType::Comprehension => write!(f, "{{{} | {}}}", self.children[0], self.children[1]),
             NodeType::Relation(r) => match r {

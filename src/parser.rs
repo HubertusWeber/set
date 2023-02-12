@@ -1,6 +1,5 @@
 use crate::lexer::Token;
 use anyhow::{bail, ensure, Result};
-use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 enum ParseItem {
@@ -137,43 +136,15 @@ impl Parsable for Vec<ParseItem> {
     }
 
     fn parse_vars(self) -> Self {
-        let used_indices = std::cell::RefCell::new(HashSet::<u32>::new());
-        let mut index_map = HashMap::<String, u32>::new();
         self.into_iter()
             .map(|i| match i {
                 ParseItem::Token(Token::Var(v)) => {
-                    if v.starts_with(&v) && v.len() > 1 {
-                        let index = v[1..].parse().unwrap();
-                        used_indices.borrow_mut().insert(index);
-                        let entry = NodeType::Variable(index);
-                        let children = vec![];
-                        ParseItem::SyntaxNode(SyntaxNode { entry, children })
+                    let index = if v.starts_with(&v) && v.len() > 1 {
+                        v[1..].parse().unwrap()
                     } else {
-                        ParseItem::Token(Token::Var(v))
-                    }
-                }
-                i => i,
-            })
-            .collect::<Vec<ParseItem>>()
-            .into_iter()
-            .map(|i| match i {
-                ParseItem::Token(Token::Var(v)) => {
-                    let entry = NodeType::Variable(if index_map.contains_key(&v) {
-                        *index_map.get(&v).unwrap()
-                    } else {
-                        let index = (0..)
-                            .into_iter()
-                            .find_map(|n| {
-                                if used_indices.borrow_mut().insert(n) {
-                                    Some(n)
-                                } else {
-                                    None
-                                }
-                            })
-                            .unwrap();
-                        index_map.insert(v, index);
-                        index
-                    });
+                        u32::MAX - v.chars().next().unwrap() as u32
+                    };
+                    let entry = NodeType::Variable(index);
                     let children = vec![];
                     ParseItem::SyntaxNode(SyntaxNode { entry, children })
                 }
