@@ -409,7 +409,7 @@ impl SyntaxNode {
             entry: NodeType::Connective(Connective::Biconditional),
             children: vec![element, subset],
         };
-        self.entry = NodeType::Quantifier(Quantifier::Existential);
+        self.entry = NodeType::Quantifier(Quantifier::Universal);
         self.children.push(var);
         self.children.push(biconditional);
         self
