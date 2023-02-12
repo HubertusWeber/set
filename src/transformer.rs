@@ -1,9 +1,14 @@
-use std::collections::{BTreeSet, HashMap};
+use std::{
+    cell::RefCell,
+    collections::{BTreeSet, HashMap},
+};
 
 use crate::{
     parser::{Connective, Constant, NodeType, Operator, Quantifier, Relation, SyntaxNode},
     SetConfig,
 };
+
+thread_local! {static USED_INDICES: RefCell<BTreeSet<u32>>  = RefCell::new(BTreeSet::new())}
 
 impl SyntaxNode {
     pub fn transform(self, config: SetConfig) -> Self {
@@ -16,24 +21,30 @@ impl SyntaxNode {
             .operators(config)
     }
 
-    fn variables(self, config: SetConfig) -> Self {
+    fn variables(mut self, config: SetConfig) -> Self {
+        USED_INDICES.with(|rc| rc.replace(self.collect_used_indices(BTreeSet::<u32>::new())));
         if !config.variables {
             return self;
         }
-        let used_vars = self.collect_used_indices(BTreeSet::<u32>::new());
-        let relevant_vars = used_vars
-            .into_iter()
-            .filter(|v| {
-                (*v < u32::MAX - 55 && *v > u32::MAX - 91)
-                    || (*v < u32::MAX - 96 && *v > u32::MAX - 123)
-            })
-            .collect::<Vec<u32>>();
-        let new_vars = self.get_free_indices(relevant_vars.len());
-        let mut var_map = HashMap::<u32, u32>::new();
-        for (k, v) in relevant_vars.into_iter().zip(new_vars.into_iter()) {
-            var_map.insert(k, v);
-        }
-        self.replace_vars(&var_map)
+        USED_INDICES.with(|rc| {
+            let relevant_indices = rc
+                .borrow()
+                .clone()
+                .into_iter()
+                .filter(|v| {
+                    (*v < u32::MAX - 55 && *v > u32::MAX - 91)
+                        || (*v < u32::MAX - 96 && *v > u32::MAX - 123)
+                })
+                .collect::<Vec<u32>>();
+            let new_indices = self.get_free_indices(relevant_indices.len());
+            let mut var_map = HashMap::<u32, u32>::new();
+            for (k, v) in relevant_indices.into_iter().zip(new_indices.into_iter()) {
+                var_map.insert(k, v);
+            }
+            self = self.replace_vars(&var_map);
+            rc.replace(self.collect_used_indices(BTreeSet::<u32>::new()));
+            self
+        })
     }
 
     fn negated_relations(mut self, config: SetConfig) -> Self {
@@ -630,17 +641,19 @@ impl SyntaxNode {
     }
 
     fn get_free_indices(&self, count: usize) -> Vec<u32> {
-        let mut result = Vec::<u32>::new();
-        let used_indices = self.collect_used_indices(BTreeSet::<u32>::new());
-        let mut n = 0..;
-        while result.len() < count {
-            let index = n.next().unwrap();
-            if !used_indices.contains(&index) {
-                result.push(index);
+        USED_INDICES.with(|rc| {
+            let mut result = Vec::<u32>::new();
+            let mut n = 0..;
+            while result.len() < count {
+                let index = n.next().unwrap();
+                if !rc.borrow().contains(&index) {
+                    rc.borrow_mut().insert(index);
+                    result.push(index);
+                }
             }
-        }
-        result.reverse();
-        result
+            result.reverse();
+            return result;
+        })
     }
 
     fn collect_used_indices(&self, mut set: BTreeSet<u32>) -> BTreeSet<u32> {
