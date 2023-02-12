@@ -1,7 +1,7 @@
 use std::collections::{BTreeSet, HashMap};
 
 use crate::{
-    parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode},
+    parser::{Connective, Constant, NodeType, Operator, Quantifier, Relation, SyntaxNode},
     SetConfig,
 };
 
@@ -10,6 +10,7 @@ impl SyntaxNode {
         self.variables(config)
             .negated_relations(config)
             .subset(config)
+            .constants(config)
             .operators(config)
             .comprehension(config)
     }
@@ -32,19 +33,6 @@ impl SyntaxNode {
             var_map.insert(k, v);
         }
         self.replace_vars(&var_map)
-    }
-
-    fn replace_vars(mut self, map: &HashMap<u32, u32>) -> Self {
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).replace_vars(map);
-            self.children.push(child);
-        }
-        if let NodeType::Variable(k) = self.entry {
-            if let Some(v) = map.get(&k) {
-                self.entry = NodeType::Variable(*v);
-            }
-        }
-        self
     }
 
     fn negated_relations(mut self, config: SetConfig) -> Self {
@@ -98,6 +86,48 @@ impl SyntaxNode {
                 self.children.push(implication);
             }
             _ => (),
+        }
+        self
+    }
+
+    fn constants(mut self, config: SetConfig) -> Self {
+        if !config.constants {
+            return self;
+        }
+        println!("{:?}", self);
+        match self.entry {
+            NodeType::Relation(Relation::Equality) => {
+                if matches!(
+                    self.children[0].entry,
+                    NodeType::Constant(Constant::EmptySet)
+                ) {
+                    self = self.phi_empty_set();
+                } else if matches!(
+                    self.children[1].entry,
+                    NodeType::Constant(Constant::EmptySet)
+                ) {
+                    self.children.swap(0, 1);
+                    self = self.phi_empty_set();
+                }
+            }
+            NodeType::Relation(Relation::Element) => {
+                if matches!(
+                    self.children[1].entry,
+                    NodeType::Constant(Constant::EmptySet)
+                ) {
+                    self = self.element_to_equality_right();
+                } else if matches!(
+                    self.children[0].entry,
+                    NodeType::Constant(Constant::EmptySet)
+                ) {
+                    self = self.element_to_equality_left();
+                }
+            }
+            _ => (),
+        }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).constants(config);
+            self.children.push(child);
         }
         self
     }
@@ -320,6 +350,22 @@ impl SyntaxNode {
         self
     }
 
+    fn phi_empty_set(mut self) -> Self {
+        let var = self.get_free_vars(1).remove(0);
+        let right = self.children.remove(1);
+        let element = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right],
+        };
+        let quantifier = SyntaxNode {
+            entry: NodeType::Quantifier(Quantifier::Existential),
+            children: vec![var, element],
+        };
+        self.entry = NodeType::Connective(Connective::Negation);
+        self.children = vec![quantifier];
+        self
+    }
+
     fn phi_comprehension(mut self) -> Self {
         let var = self.get_free_vars(1).remove(0);
         let right = self.children.remove(1);
@@ -477,6 +523,19 @@ impl SyntaxNode {
         self.entry = NodeType::Connective(Connective::Disjunction);
         self.children.push(equality_left);
         self.children.push(equality_right);
+        self
+    }
+
+    fn replace_vars(mut self, map: &HashMap<u32, u32>) -> Self {
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).replace_vars(map);
+            self.children.push(child);
+        }
+        if let NodeType::Variable(k) = self.entry {
+            if let Some(v) = map.get(&k) {
+                self.entry = NodeType::Variable(*v);
+            }
+        }
         self
     }
 
