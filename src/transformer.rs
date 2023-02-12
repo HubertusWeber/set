@@ -11,8 +11,9 @@ impl SyntaxNode {
             .negated_relations(config)
             .subset(config)
             .constants(config)
-            .operators(config)
+            .singleton(config)
             .comprehension(config)
+            .operators(config)
     }
 
     fn variables(self, config: SetConfig) -> Self {
@@ -127,6 +128,35 @@ impl SyntaxNode {
         for _ in 0..self.children.len() {
             let child = self.children.remove(0).constants(config);
             self.children.push(child);
+        }
+        self
+    }
+
+    fn singleton(mut self, config: SetConfig) -> Self {
+        if !config.singleton {
+            return self;
+        }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).singleton(config);
+            self.children.push(child);
+        }
+        if matches!(self.entry, NodeType::Operator(Operator::Singleton)) {
+            let var = self.get_free_vars(1).remove(0);
+            let child = self.children.remove(0);
+            let power_set = SyntaxNode {
+                entry: NodeType::Operator(Operator::PowerSet),
+                children: vec![child.clone()],
+            };
+            let element = SyntaxNode {
+                entry: NodeType::Relation(Relation::Element),
+                children: vec![var.clone(), power_set],
+            };
+            let equality = SyntaxNode {
+                entry: NodeType::Relation(Relation::Equality),
+                children: vec![var, child],
+            };
+            self.entry = NodeType::Comprehension;
+            self.children = vec![element, equality];
         }
         self
     }

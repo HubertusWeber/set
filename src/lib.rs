@@ -9,6 +9,7 @@ pub struct SetConfig {
     pub constants: bool,
     pub negated_relations: bool,
     pub subset: bool,
+    pub singleton: bool,
     pub comprehension: bool,
     pub power_set: bool,
     pub big_intersection: bool,
