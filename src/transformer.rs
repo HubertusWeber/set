@@ -69,7 +69,7 @@ impl SyntaxNode {
         }
         match self.entry {
             NodeType::Relation(Relation::Subset) => {
-                let var = self.get_free_vars(1).remove(0);
+                let var = self.get_free_var();
                 let antecedent = SyntaxNode {
                     entry: NodeType::Relation(Relation::Element),
                     children: vec![var.clone(), self.children.remove(0)],
@@ -149,7 +149,7 @@ impl SyntaxNode {
             self.children.push(child);
         }
         if matches!(self.entry, NodeType::Operator(Operator::Singleton)) {
-            let var = self.get_free_vars(1).remove(0);
+            let var = self.get_free_var();
             let child = self.children.remove(0);
             let power_set = SyntaxNode {
                 entry: NodeType::Operator(Operator::PowerSet),
@@ -322,7 +322,7 @@ impl SyntaxNode {
     }
 
     fn ext(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let right = self.children.remove(1);
         let left = self.children.remove(0);
         let element_right = SyntaxNode {
@@ -344,7 +344,7 @@ impl SyntaxNode {
     }
 
     fn element_to_equality_left(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let right = self.children.remove(1);
         let left = self.children.remove(0);
         let equality = SyntaxNode {
@@ -366,7 +366,7 @@ impl SyntaxNode {
     }
 
     fn element_to_equality_right(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let right = self.children.remove(1);
         let left = self.children.remove(0);
         let equality = SyntaxNode {
@@ -388,7 +388,7 @@ impl SyntaxNode {
     }
 
     fn phi_empty_set(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let right = self.children.remove(1);
         let element = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
@@ -433,7 +433,7 @@ impl SyntaxNode {
 
     fn phi_omega(mut self) -> Self {
         let right = self.children.remove(1);
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let empty_set = SyntaxNode {
             entry: NodeType::Constant(Constant::EmptySet),
             children: vec![],
@@ -472,7 +472,7 @@ impl SyntaxNode {
     }
 
     fn phi_power_set(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let right = self.children.remove(1);
         let mut left = self.children.remove(0);
         let element = SyntaxNode {
@@ -494,7 +494,7 @@ impl SyntaxNode {
     }
 
     fn phi_big_intersection(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let mut right = self.children.remove(1);
         let left = self.children.remove(0);
         let element_right = SyntaxNode {
@@ -516,7 +516,7 @@ impl SyntaxNode {
     }
 
     fn phi_big_union(mut self) -> Self {
-        let var = self.get_free_vars(1).remove(0);
+        let var = self.get_free_var();
         let mut right = self.children.remove(1);
         let left = self.children.remove(0);
         let element_right = SyntaxNode {
@@ -622,14 +622,11 @@ impl SyntaxNode {
         self
     }
 
-    fn get_free_vars(&self, count: usize) -> Vec<SyntaxNode> {
-        self.get_free_indices(count)
-            .into_iter()
-            .map(|v| SyntaxNode {
-                entry: NodeType::Variable(v),
-                children: vec![],
-            })
-            .collect()
+    fn get_free_var(&self) -> SyntaxNode {
+        SyntaxNode {
+            entry: NodeType::Variable(self.get_free_indices(1).remove(0)),
+            children: vec![],
+        }
     }
 
     fn get_free_indices(&self, count: usize) -> Vec<u32> {
