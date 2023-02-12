@@ -94,7 +94,6 @@ impl SyntaxNode {
         if !config.constants {
             return self;
         }
-        println!("{:?}", self);
         match self.entry {
             NodeType::Relation(Relation::Equality) => {
                 if matches!(
