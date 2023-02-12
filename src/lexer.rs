@@ -108,7 +108,7 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
             result.push(Token::Var(var_str));
             continue 'outer;
         }
-        if input.chars().next().unwrap().is_ascii() {
+        if input.chars().next().unwrap().is_alphabetic() {
             result.push(Token::Var(input.remove(0).into()));
             continue 'outer;
         }
