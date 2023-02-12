@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::{
     parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode},
@@ -7,18 +7,52 @@ use crate::{
 
 impl SyntaxNode {
     pub fn transform(self, config: SetConfig) -> Self {
-        self.negated_relation(config)
+        self.variables(config)
+            .negated_relations(config)
             .subset(config)
             .operators(config)
             .comprehension(config)
     }
 
-    fn negated_relation(mut self, config: SetConfig) -> Self {
+    fn variables(self, config: SetConfig) -> Self {
+        if !config.variables {
+            return self;
+        }
+        let used_vars = self.collect_used_indices(BTreeSet::<u32>::new());
+        let relevant_vars = used_vars
+            .into_iter()
+            .filter(|v| {
+                (*v < u32::MAX - 55 && *v > u32::MAX - 91)
+                    || (*v < u32::MAX - 96 && *v > u32::MAX - 123)
+            })
+            .collect::<Vec<u32>>();
+        let new_vars = self.get_free_indices(relevant_vars.len());
+        let mut var_map = HashMap::<u32, u32>::new();
+        for (k, v) in relevant_vars.into_iter().zip(new_vars.into_iter()) {
+            var_map.insert(k, v);
+        }
+        self.replace_vars(&var_map)
+    }
+
+    fn replace_vars(mut self, map: &HashMap<u32, u32>) -> Self {
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).replace_vars(map);
+            self.children.push(child);
+        }
+        if let NodeType::Variable(k) = self.entry {
+            if let Some(v) = map.get(&k) {
+                self.entry = NodeType::Variable(*v);
+            }
+        }
+        self
+    }
+
+    fn negated_relations(mut self, config: SetConfig) -> Self {
         if !config.negated_relations {
             return self;
         }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).negated_relation(config);
+            let child = self.children.remove(0).negated_relations(config);
             self.children.push(child);
         }
         if let NodeType::Relation(r) = self.entry {
@@ -447,22 +481,30 @@ impl SyntaxNode {
     }
 
     fn get_free_vars(&self, count: usize) -> Vec<SyntaxNode> {
-        let mut result = Vec::<SyntaxNode>::new();
-        let used_indices = self.collect_used_indices(HashSet::<u32>::new());
+        self.get_free_indices(count)
+            .into_iter()
+            .map(|v| SyntaxNode {
+                entry: NodeType::Variable(v),
+                children: vec![],
+            })
+            .collect()
+    }
+
+    fn get_free_indices(&self, count: usize) -> Vec<u32> {
+        let mut result = Vec::<u32>::new();
+        let used_indices = self.collect_used_indices(BTreeSet::<u32>::new());
         let mut n = 0..;
         while result.len() < count {
             let index = n.next().unwrap();
             if !used_indices.contains(&index) {
-                result.push(SyntaxNode {
-                    entry: NodeType::Variable(index),
-                    children: vec![],
-                });
+                result.push(index);
             }
         }
+        result.reverse();
         result
     }
 
-    fn collect_used_indices(&self, mut set: HashSet<u32>) -> HashSet<u32> {
+    fn collect_used_indices(&self, mut set: BTreeSet<u32>) -> BTreeSet<u32> {
         if let NodeType::Variable(v) = self.entry {
             set.insert(v);
         }
