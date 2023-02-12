@@ -1,15 +1,24 @@
 use std::collections::HashSet;
 
-use crate::parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode};
+use crate::{
+    parser::{Connective, NodeType, Operator, Quantifier, Relation, SyntaxNode},
+    SetConfig,
+};
 
 impl SyntaxNode {
-    pub fn transform(self) -> Self {
-        self.negated_relation().subset().operators().comprehension()
+    pub fn transform(self, config: SetConfig) -> Self {
+        self.negated_relation(config)
+            .subset(config)
+            .operators(config)
+            .comprehension(config)
     }
 
-    fn negated_relation(mut self) -> Self {
+    fn negated_relation(mut self, config: SetConfig) -> Self {
+        if !config.negated_relations {
+            return self;
+        }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).negated_relation();
+            let child = self.children.remove(0).negated_relation(config);
             self.children.push(child);
         }
         if let NodeType::Relation(r) = self.entry {
@@ -27,9 +36,12 @@ impl SyntaxNode {
         self
     }
 
-    fn subset(mut self) -> Self {
+    fn subset(mut self, config: SetConfig) -> Self {
+        if !config.subset {
+            return self;
+        }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).subset();
+            let child = self.children.remove(0).subset(config);
             self.children.push(child);
         }
         match self.entry {
@@ -52,6 +64,158 @@ impl SyntaxNode {
                 self.children.push(implication);
             }
             _ => (),
+        }
+        self
+    }
+
+    fn comprehension(mut self, config: SetConfig) -> Self {
+        if !config.comprehension {
+            return self;
+        }
+        match self.entry {
+            NodeType::Relation(Relation::Equality) => {
+                if matches!(self.children[0].entry, NodeType::Comprehension) {
+                    self = self.phi_comprehension().subset(config);
+                }
+                if matches!(self.children[1].entry, NodeType::Comprehension) {
+                    self.children.swap(0, 1);
+                    self = self.phi_comprehension().subset(config);
+                }
+            }
+            NodeType::Relation(Relation::Element) => {
+                if matches!(self.children[1].entry, NodeType::Comprehension) {
+                    self = self.element_to_equality_right();
+                } else if matches!(self.children[0].entry, NodeType::Comprehension) {
+                    self = self.element_to_equality_left();
+                }
+            }
+            _ => (),
+        }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).comprehension(config);
+            self.children.push(child);
+        }
+        self
+    }
+
+    fn operators(mut self, config: SetConfig) -> Self {
+        match self.entry {
+            NodeType::Relation(Relation::Equality) => {
+                match self.children[0].entry {
+                    NodeType::Operator(o) => match o {
+                        Operator::PowerSet if config.power_set => {
+                            self = self.phi_power_set().subset(config);
+                        }
+                        Operator::BigIntersection if config.big_intersection => {
+                            self = self.ext();
+                        }
+                        Operator::BigUnion if config.big_union => {
+                            self = self.ext();
+                        }
+                        Operator::Intersection if config.intersection => {
+                            self = self.ext();
+                        }
+                        Operator::Difference if config.difference => {
+                            self = self.ext();
+                        }
+                        Operator::Union if config.union => {
+                            self = self.ext();
+                        }
+                        Operator::PairSet if config.pair_set => {
+                            self = self.ext();
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+                match self.children[1].entry {
+                    NodeType::Operator(o) => match o {
+                        Operator::PowerSet if config.power_set => {
+                            self.children.swap(0, 1);
+                            self = self.phi_power_set().subset(config);
+                        }
+                        Operator::BigIntersection if config.big_intersection => {
+                            self = self.ext();
+                        }
+                        Operator::BigUnion if config.big_union => {
+                            self = self.ext();
+                        }
+                        Operator::Intersection if config.intersection => {
+                            self = self.ext();
+                        }
+                        Operator::Difference if config.difference => {
+                            self = self.ext();
+                        }
+                        Operator::Union if config.union => {
+                            self = self.ext();
+                        }
+                        Operator::PairSet if config.pair_set => {
+                            self = self.ext();
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+            NodeType::Relation(Relation::Element) => {
+                match self.children[1].entry {
+                    NodeType::Operator(o) => match o {
+                        Operator::PowerSet if config.power_set => {
+                            self = self.element_to_equality_right()
+                        }
+                        Operator::BigIntersection if config.big_intersection => {
+                            self = self.phi_big_intersection();
+                        }
+                        Operator::BigUnion if config.big_union => {
+                            self = self.phi_big_union();
+                        }
+                        Operator::Intersection if config.intersection => {
+                            self = self.phi_intersection();
+                        }
+                        Operator::Difference if config.difference => {
+                            self = self.phi_difference();
+                        }
+                        Operator::Union if config.union => {
+                            self = self.phi_union();
+                        }
+                        Operator::PairSet if config.pair_set => {
+                            self = self.phi_pair_set();
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+                match self.children[0].entry {
+                    NodeType::Operator(o) => match o {
+                        Operator::PowerSet if config.power_set => {
+                            self = self.element_to_equality_left()
+                        }
+                        Operator::BigIntersection if config.big_intersection => {
+                            self = self.element_to_equality_left()
+                        }
+                        Operator::BigUnion if config.big_union => {
+                            self = self.element_to_equality_left()
+                        }
+                        Operator::Intersection if config.intersection => {
+                            self = self.element_to_equality_left()
+                        }
+                        Operator::Difference if config.difference => {
+                            self = self.element_to_equality_left()
+                        }
+                        Operator::Union if config.union => self = self.element_to_equality_left(),
+                        Operator::PairSet if config.pair_set => {
+                            self = self.element_to_equality_left()
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).operators(config);
+            self.children.push(child);
         }
         self
     }
@@ -122,33 +286,6 @@ impl SyntaxNode {
         self
     }
 
-    fn comprehension(mut self) -> Self {
-        match self.entry {
-            NodeType::Relation(Relation::Equality) => {
-                if matches!(self.children[0].entry, NodeType::Comprehension) {
-                    self = self.phi_comprehension();
-                }
-                if matches!(self.children[1].entry, NodeType::Comprehension) {
-                    self.children.swap(0, 1);
-                    self = self.phi_comprehension();
-                }
-            }
-            NodeType::Relation(Relation::Element) => {
-                if matches!(self.children[1].entry, NodeType::Comprehension) {
-                    self = self.element_to_equality_right();
-                } else if matches!(self.children[0].entry, NodeType::Comprehension) {
-                    self = self.element_to_equality_left();
-                }
-            }
-            _ => (),
-        }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).comprehension();
-            self.children.push(child);
-        }
-        self
-    }
-
     fn phi_comprehension(mut self) -> Self {
         let var = self.get_free_vars(1).remove(0);
         let right = self.children.remove(1);
@@ -160,8 +297,7 @@ impl SyntaxNode {
         let subset = SyntaxNode {
             entry: NodeType::Relation(Relation::Subset),
             children: vec![var.clone(), left.children.remove(0)],
-        }
-        .subset();
+        };
         let biconditional = SyntaxNode {
             entry: NodeType::Connective(Connective::Biconditional),
             children: vec![element, subset],
@@ -172,67 +308,7 @@ impl SyntaxNode {
         self
     }
 
-    fn operators(mut self) -> Self {
-        match self.entry {
-            NodeType::Relation(Relation::Equality) => {
-                if matches!(
-                    self.children[0].entry,
-                    NodeType::Operator(Operator::PowerSet)
-                ) {
-                    self = self.phi_powerset();
-                }
-                if matches!(
-                    self.children[1].entry,
-                    NodeType::Operator(Operator::PowerSet)
-                ) {
-                    self.children.swap(0, 1);
-                    self = self.phi_powerset();
-                }
-                if matches!(self.children[0].entry, NodeType::Operator(o) if !matches!(o, Operator::PowerSet) )
-                    || matches!(self.children[1].entry, NodeType::Operator(o) if !matches!(o, Operator::PowerSet) )
-                {
-                    self = self.ext();
-                }
-            }
-            NodeType::Relation(Relation::Element) => {
-                match self.children[1].entry {
-                    NodeType::Operator(Operator::PowerSet) => {
-                        self = self.element_to_equality_right()
-                    }
-                    NodeType::Operator(Operator::BigIntersection) => {
-                        self = self.phi_big_intersection();
-                    }
-                    NodeType::Operator(Operator::BigUnion) => {
-                        self = self.phi_big_union();
-                    }
-                    NodeType::Operator(Operator::Intersection) => {
-                        self = self.phi_intersection();
-                    }
-                    NodeType::Operator(Operator::Difference) => {
-                        self = self.phi_difference();
-                    }
-                    NodeType::Operator(Operator::Union) => {
-                        self = self.phi_union();
-                    }
-                    NodeType::Operator(Operator::PairSet) => {
-                        self = self.phi_pair_set();
-                    }
-                    _ => (),
-                }
-                if matches!(self.children[0].entry, NodeType::Operator(..)) {
-                    self = self.element_to_equality_left()
-                }
-            }
-            _ => (),
-        }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).operators();
-            self.children.push(child);
-        }
-        self
-    }
-
-    fn phi_powerset(mut self) -> Self {
+    fn phi_power_set(mut self) -> Self {
         let var = self.get_free_vars(1).remove(0);
         let right = self.children.remove(1);
         let mut left = self.children.remove(0);
@@ -243,8 +319,7 @@ impl SyntaxNode {
         let subset = SyntaxNode {
             entry: NodeType::Relation(Relation::Subset),
             children: vec![var.clone(), left.children.remove(0)],
-        }
-        .subset();
+        };
         let biconditional = SyntaxNode {
             entry: NodeType::Connective(Connective::Biconditional),
             children: vec![element, subset],
