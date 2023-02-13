@@ -356,7 +356,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_set_at(pos + 1)?;
         ensure!(
             matches!(&self[pos + 1], ParseItem::SyntaxNode(n) if n.is_set()),
-            "Unexpected second relatum, expected constant, variable, operation or comprehension"
+            "Unexpected operand, expected constant, variable, operation or comprehension"
         );
         ensure!(pos + 2 < self.len(), "Unexpected end of input");
         ensure!(
@@ -383,7 +383,7 @@ impl Parsable for Vec<ParseItem> {
         self = self.parse_set_at(pos + 2)?;
         ensure!(
             matches!(&self[pos + 2], ParseItem::SyntaxNode(n) if n.is_set()),
-            "Unexpected second relatum, expected constant, variable, operation or comprehension"
+            "Unexpected second operand, expected constant, variable, operation or comprehension"
         );
         let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
