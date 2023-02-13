@@ -105,11 +105,9 @@ impl SyntaxNode {
             NodeType::Relation(Relation::Equality) => {
                 match self.children[1].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self.children.swap(0, 1);
+                        self.children.swap(0, 1)
                     }
-                    NodeType::Constant(Constant::Omega) if config.omega => {
-                        self.children.swap(0, 1);
-                    }
+                    NodeType::Constant(Constant::Omega) if config.omega => self.children.swap(0, 1),
                     _ => (),
                 }
                 match self.children[0].entry {
@@ -117,7 +115,7 @@ impl SyntaxNode {
                         self = self.phi_empty_set()
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.phi_omega().operators(config);
+                        self = self.phi_omega().operators(config)
                     }
                     _ => (),
                 }
@@ -125,19 +123,19 @@ impl SyntaxNode {
             NodeType::Relation(Relation::Element) => {
                 match self.children[1].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self = self.element_to_equality_right();
+                        self = self.element_to_equality_right()
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.element_to_equality_right();
+                        self = self.element_to_equality_right()
                     }
                     _ => (),
                 }
                 match self.children[0].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self = self.element_to_equality_left();
+                        self = self.element_to_equality_left()
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.element_to_equality_left();
+                        self = self.element_to_equality_left()
                     }
                     _ => (),
                 }
@@ -177,7 +175,7 @@ impl SyntaxNode {
                 match self.children[0].entry {
                     NodeType::Operator(o) => match o {
                         Operator::PowerSet if config.power_set => {
-                            self = self.phi_power_set().subset(config);
+                            self = self.phi_power_set().subset(config)
                         }
                         Operator::BigIntersection if config.big_intersection => {
                             self = self.ext();
@@ -199,16 +197,14 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
-                    NodeType::Comprehension => {
-                        self = self.phi_comprehension();
-                    }
+                    NodeType::Comprehension => self = self.phi_comprehension(),
                     _ => (),
                 }
                 match self.children[1].entry {
                     NodeType::Operator(o) => match o {
                         Operator::PowerSet if config.power_set => {
                             self.children.swap(0, 1);
-                            self = self.phi_power_set().subset(config);
+                            self = self.phi_power_set().subset(config)
                         }
                         Operator::BigIntersection if config.big_intersection => {
                             self = self.ext();
@@ -232,7 +228,7 @@ impl SyntaxNode {
                     },
                     NodeType::Comprehension => {
                         self.children.swap(0, 1);
-                        self = self.phi_comprehension();
+                        self = self.phi_comprehension()
                     }
                     _ => (),
                 }
@@ -246,21 +242,13 @@ impl SyntaxNode {
                         Operator::BigIntersection if config.big_intersection => {
                             self = self.phi_big_intersection()
                         }
-                        Operator::BigUnion if config.big_union => {
-                            self = self.phi_big_union();
-                        }
+                        Operator::BigUnion if config.big_union => self = self.phi_big_union(),
                         Operator::Intersection if config.intersection => {
-                            self = self.phi_intersection();
+                            self = self.phi_intersection()
                         }
-                        Operator::Difference if config.difference => {
-                            self = self.phi_difference();
-                        }
-                        Operator::Union if config.union => {
-                            self = self.phi_union();
-                        }
-                        Operator::PairSet if config.pair_set => {
-                            self = self.phi_pair_set();
-                        }
+                        Operator::Difference if config.difference => self = self.phi_difference(),
+                        Operator::Union if config.union => self = self.phi_union(),
+                        Operator::PairSet if config.pair_set => self = self.phi_pair_set(),
                         _ => (),
                     },
                     NodeType::Comprehension => self = self.element_to_equality_right(),
