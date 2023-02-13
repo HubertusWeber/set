@@ -145,7 +145,13 @@ impl SyntaxNode {
             _ => (),
         }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).constants(config);
+            let mut child = self.children.remove(0);
+            if matches!(child.entry, NodeType::Comprehension) {
+                let grandchild = child.children.remove(1).constants(config);
+                child.children.push(grandchild);
+            } else {
+                child = child.constants(config);
+            }
             self.children.push(child);
         }
         self
@@ -156,7 +162,13 @@ impl SyntaxNode {
             return self;
         }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).singleton(config);
+            let mut child = self.children.remove(0);
+            if matches!(child.entry, NodeType::Comprehension) {
+                let grandchild = child.children.remove(1).singleton(config);
+                child.children.push(grandchild);
+            } else {
+                child = child.singleton(config);
+            }
             self.children.push(child);
         }
         if matches!(self.entry, NodeType::Operator(Operator::Singleton)) {
@@ -326,7 +338,13 @@ impl SyntaxNode {
             _ => (),
         }
         for _ in 0..self.children.len() {
-            let child = self.children.remove(0).operators(config);
+            let mut child = self.children.remove(0);
+            if matches!(child.entry, NodeType::Comprehension) {
+                let grandchild = child.children.remove(1).operators(config);
+                child.children.push(grandchild);
+            } else {
+                child = child.operators(config);
+            }
             self.children.push(child);
         }
         self
