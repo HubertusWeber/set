@@ -288,7 +288,10 @@ impl SyntaxNode {
                             self = self.element_to_equality_right()
                         }
                         Operator::BigIntersection if config.big_intersection => {
-                            self = self.phi_big_intersection();
+                            self = self
+                                .phi_big_intersection()
+                                .negated_relations(config)
+                                .constants(config);
                         }
                         Operator::BigUnion if config.big_union => {
                             self = self.phi_big_union();
@@ -524,23 +527,35 @@ impl SyntaxNode {
 
     fn phi_big_intersection(mut self) -> Self {
         let var = self.get_free_var();
-        let mut right = self.children.remove(1);
+        let right = self.children.remove(1).children.remove(0);
         let left = self.children.remove(0);
+        let empty_set = SyntaxNode {
+            entry: NodeType::Constant(Constant::EmptySet),
+            children: vec![],
+        };
+        let not_equal = SyntaxNode {
+            entry: NodeType::Relation(Relation::NotEqual),
+            children: vec![right.clone(), empty_set],
+        };
         let element_right = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
             children: vec![left, var.clone()],
         };
         let element_left = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), right.children.remove(0)],
+            children: vec![var.clone(), right],
         };
         let implication = SyntaxNode {
             entry: NodeType::Connective(Connective::Implication),
             children: vec![element_left, element_right],
         };
-        self.entry = NodeType::Quantifier(Quantifier::Universal);
-        self.children.push(var);
-        self.children.push(implication);
+        let quantifier = SyntaxNode {
+            entry: NodeType::Quantifier(Quantifier::Universal),
+            children: vec![var, implication],
+        };
+        self.entry = NodeType::Connective(Connective::Conjunction);
+        self.children.push(not_equal);
+        self.children.push(quantifier);
         self
     }
 
