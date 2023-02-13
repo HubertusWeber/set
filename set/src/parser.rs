@@ -319,10 +319,12 @@ impl Parsable for Vec<ParseItem> {
             matches!(&self[pos], ParseItem::SyntaxNode(n) if matches!(n.entry, NodeType::Relation(Relation::Element))),
             "First part of set comprehension must be an element relation"
         );
-        let ParseItem::SyntaxNode(left) = self.remove(pos) else {unreachable!()};
+        let ParseItem::SyntaxNode(mut left) = self.remove(pos) else {unreachable!()};
         let ParseItem::SyntaxNode(right) = self.remove(pos + 1) else {unreachable!()};
+        let spec = left.children.remove(1);
+        let var = left.children.remove(0);
         let entry = NodeType::Comprehension;
-        let children = vec![left, right];
+        let children = vec![var, spec, right];
         self[pos] = ParseItem::SyntaxNode(SyntaxNode { entry, children });
         self.parse_at(pos)
     }

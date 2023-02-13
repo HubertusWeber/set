@@ -34,7 +34,11 @@ impl fmt::Display for SyntaxNode {
                     write!(f, "{}", var)
                 }
             }
-            NodeType::Comprehension => write!(f, "{{{} | {}}}", self.children[0], self.children[1]),
+            NodeType::Comprehension => write!(
+                f,
+                "{{{} ∈ {} | {}}}",
+                self.children[0], self.children[1], self.children[2]
+            ),
             NodeType::Relation(r) => match r {
                 Relation::Equality => write!(f, "{} = {}", self.children[0], self.children[1]),
                 Relation::Element => write!(f, "{} ∈ {}", self.children[0], self.children[1]),
