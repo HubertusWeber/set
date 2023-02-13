@@ -288,7 +288,7 @@ impl SyntaxNode {
                             self = self.element_to_equality_right()
                         }
                         Operator::BigIntersection if config.big_intersection => {
-                            self = self.phi_big_intersection().negated_relations(config)
+                            self = self.phi_big_intersection()
                         }
                         Operator::BigUnion if config.big_union => {
                             self = self.phi_big_union();
@@ -530,9 +530,13 @@ impl SyntaxNode {
             entry: NodeType::Constant(Constant::EmptySet),
             children: vec![],
         };
-        let not_equal = SyntaxNode {
-            entry: NodeType::Relation(Relation::NotEqual),
+        let equality = SyntaxNode {
+            entry: NodeType::Relation(Relation::Equality),
             children: vec![right.clone(), empty_set],
+        };
+        let negation = SyntaxNode {
+            entry: NodeType::Connective(Connective::Negation),
+            children: vec![equality],
         };
         let element_right = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
@@ -551,7 +555,7 @@ impl SyntaxNode {
             children: vec![var, implication],
         };
         self.entry = NodeType::Connective(Connective::Conjunction);
-        self.children.push(not_equal);
+        self.children.push(negation);
         self.children.push(quantifier);
         self
     }
