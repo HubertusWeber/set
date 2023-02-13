@@ -15,10 +15,10 @@ impl SyntaxNode {
         self.variables(config)
             .negated_relations(config)
             .subset(config)
-            .constants(config)
             .singleton(config)
             .comprehension(config)
             .operators(config)
+            .constants(config)
     }
 
     fn variables(mut self, config: SetConfig) -> Self {
@@ -288,10 +288,7 @@ impl SyntaxNode {
                             self = self.element_to_equality_right()
                         }
                         Operator::BigIntersection if config.big_intersection => {
-                            self = self
-                                .phi_big_intersection()
-                                .negated_relations(config)
-                                .constants(config);
+                            self = self.phi_big_intersection().negated_relations(config)
                         }
                         Operator::BigUnion if config.big_union => {
                             self = self.phi_big_union();
