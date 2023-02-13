@@ -519,16 +519,16 @@ impl SyntaxNode {
     fn phi_comprehension(mut self) -> Self {
         let right = self.children.remove(1);
         let mut left = self.children.remove(0);
-        let phi = left.children.remove(1);
-        let mut spec = left.children.remove(0);
-        let var = spec.children.remove(0);
+        let phi = left.children.remove(2);
+        let spec = left.children.remove(1);
+        let var = left.children.remove(0);
         let element_left = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
             children: vec![var.clone(), right],
         };
         let element_right = SyntaxNode {
             entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), spec.children.remove(0)],
+            children: vec![var.clone(), spec],
         };
         let conjunction = SyntaxNode {
             entry: NodeType::Connective(Connective::Conjunction),
