@@ -569,7 +569,7 @@ impl SyntaxNode {
             children: vec![var.clone(), right.children.remove(0)],
         };
         let implication = SyntaxNode {
-            entry: NodeType::Connective(Connective::Implication),
+            entry: NodeType::Connective(Connective::Conjunction),
             children: vec![element_left, element_right],
         };
         self.entry = NodeType::Quantifier(Quantifier::Existential);
