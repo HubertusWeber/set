@@ -1,0 +1,19 @@
+[package]
+name = "set_ui"
+version = "0.1.0"
+authors = ["Hubertus Weber"]
+edition = "2021"
+rust-version = "1.65"
+
+[dependencies]
+set = { path = "../set"}
+egui = "0.21.0"
+eframe = { version = "0.21.0", default-features = false, features = ["glow"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-subscriber = "0.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.6"
+tracing-wasm = "0.2"
+wasm-bindgen-futures = "0.4"

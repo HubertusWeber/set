@@ -1,0 +1,9 @@
+[package]
+name = "set"
+version = "0.1.0"
+authors = ["Hubertus Weber"]
+edition = "2021"
+rust-version = "1.65"
+
+[dependencies]
+anyhow = "1.0"

@@ -1,7 +1,9 @@
-[package]
-name = "set"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-anyhow = "1.0"
+members = [
+    "set",
+    "set_ui"
+]
+
+[profile.release]
+opt-level = 2

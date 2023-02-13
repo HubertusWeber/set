@@ -1,0 +1,4 @@
+[build]
+target = "set_ui/index.html"
+dist = "dist"
+filehash = false
