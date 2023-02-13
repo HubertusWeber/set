@@ -151,29 +151,13 @@ impl SyntaxNode {
     }
 
     fn operators(mut self, config: SetConfig) -> Self {
-        if matches!(self.entry, NodeType::Operator(Operator::Singleton) if config.singleton) {
-            let var = self.get_free_var();
-            let child = self.children.remove(0);
-            let power_set = SyntaxNode {
-                entry: NodeType::Operator(Operator::PowerSet),
-                children: vec![child.clone()],
-            };
-            let element = SyntaxNode {
-                entry: NodeType::Relation(Relation::Element),
-                children: vec![var.clone(), power_set],
-            };
-            let equality = SyntaxNode {
-                entry: NodeType::Relation(Relation::Equality),
-                children: vec![var, child],
-            };
-            self.entry = NodeType::Comprehension;
-            self.children = vec![element, equality];
-        }
-
         match self.entry {
             NodeType::Relation(Relation::Equality) => {
                 match self.children[0].entry {
                     NodeType::Operator(o) => match o {
+                        Operator::Singleton if config.singleton => {
+                            self = self.phi_singleton().operators(config)
+                        }
                         Operator::PowerSet if config.power_set => {
                             self = self.phi_power_set().subset(config)
                         }
@@ -202,6 +186,9 @@ impl SyntaxNode {
                 }
                 match self.children[1].entry {
                     NodeType::Operator(o) => match o {
+                        Operator::Singleton if config.singleton => {
+                            self = self.phi_singleton().operators(config)
+                        }
                         Operator::PowerSet if config.power_set => {
                             self.children.swap(0, 1);
                             self = self.phi_power_set().subset(config)
@@ -236,6 +223,9 @@ impl SyntaxNode {
             NodeType::Relation(Relation::Element) => {
                 match self.children[1].entry {
                     NodeType::Operator(o) => match o {
+                        Operator::Singleton if config.singleton => {
+                            self = self.phi_singleton().operators(config)
+                        }
                         Operator::PowerSet if config.power_set => {
                             self = self.element_to_equality_right()
                         }
@@ -256,6 +246,9 @@ impl SyntaxNode {
                 }
                 match self.children[0].entry {
                     NodeType::Operator(o) => match o {
+                        Operator::Singleton if config.singleton => {
+                            self = self.phi_singleton().operators(config)
+                        }
                         Operator::PowerSet if config.power_set => {
                             self = self.element_to_equality_left()
                         }
@@ -284,13 +277,7 @@ impl SyntaxNode {
             _ => (),
         }
         for _ in 0..self.children.len() {
-            let mut child = self.children.remove(0);
-            if matches!(child.entry, NodeType::Comprehension) {
-                let grandchild = child.children.remove(1).operators(config);
-                child.children.push(grandchild);
-            } else {
-                child = child.operators(config);
-            }
+            let child = self.children.remove(0).operators(config);
             self.children.push(child);
         }
         self
@@ -359,6 +346,28 @@ impl SyntaxNode {
         self.entry = NodeType::Quantifier(Quantifier::Existential);
         self.children.push(var);
         self.children.push(conjunction);
+        self
+    }
+
+    fn phi_singleton(mut self) -> Self {
+        for _ in 0..2 {
+            let mut child = self.children.remove(0);
+            if matches!(child.entry, NodeType::Operator(Operator::Singleton)) {
+                let var = self.get_free_var();
+                let grandchild = child.children.remove(0);
+                let power_set = SyntaxNode {
+                    entry: NodeType::Operator(Operator::PowerSet),
+                    children: vec![grandchild.clone()],
+                };
+                let equality = SyntaxNode {
+                    entry: NodeType::Relation(Relation::Equality),
+                    children: vec![var.clone(), grandchild],
+                };
+                child.entry = NodeType::Comprehension;
+                child.children = vec![var, power_set, equality];
+            }
+            self.children.push(child);
+        }
         self
     }
 
