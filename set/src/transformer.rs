@@ -15,10 +15,8 @@ impl SyntaxNode {
         self.variables(config)
             .negated_relations(config)
             .subset(config)
-            .comprehension(config)
             .operators(config)
             .constants(config)
-            .singleton(config)
     }
 
     fn variables(mut self, config: SetConfig) -> Self {
@@ -51,10 +49,6 @@ impl SyntaxNode {
         if !config.negated_relations {
             return self;
         }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).negated_relations(config);
-            self.children.push(child);
-        }
         if let NodeType::Relation(r) = self.entry {
             let entry = match r {
                 Relation::NotEqual => NodeType::Relation(Relation::Equality),
@@ -67,16 +61,16 @@ impl SyntaxNode {
             self.entry = NodeType::Connective(Connective::Negation);
             self.children = vec![child];
         }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).negated_relations(config);
+            self.children.push(child);
+        }
         self
     }
 
     fn subset(mut self, config: SetConfig) -> Self {
         if !config.subset {
             return self;
-        }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).subset(config);
-            self.children.push(child);
         }
         match self.entry {
             NodeType::Relation(Relation::Subset) => {
@@ -99,6 +93,10 @@ impl SyntaxNode {
             }
             _ => (),
         }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).subset(config);
+            self.children.push(child);
+        }
         self
     }
 
@@ -118,7 +116,9 @@ impl SyntaxNode {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
                         self = self.phi_empty_set()
                     }
-                    NodeType::Constant(Constant::Omega) if config.omega => self = self.phi_omega(),
+                    NodeType::Constant(Constant::Omega) if config.omega => {
+                        self = self.phi_omega().operators(config);
+                    }
                     _ => (),
                 }
             }
@@ -146,32 +146,14 @@ impl SyntaxNode {
         }
         for _ in 0..self.children.len() {
             let mut child = self.children.remove(0);
-            if matches!(child.entry, NodeType::Comprehension) {
-                let grandchild = child.children.remove(1).constants(config);
-                child.children.push(grandchild);
-            } else {
-                child = child.constants(config);
-            }
+            child = child.constants(config);
             self.children.push(child);
         }
         self
     }
 
-    fn singleton(mut self, config: SetConfig) -> Self {
-        if !config.singleton {
-            return self;
-        }
-        for _ in 0..self.children.len() {
-            let mut child = self.children.remove(0);
-            if matches!(child.entry, NodeType::Comprehension) {
-                let grandchild = child.children.remove(1).singleton(config);
-                child.children.push(grandchild);
-            } else {
-                child = child.singleton(config);
-            }
-            self.children.push(child);
-        }
-        if matches!(self.entry, NodeType::Operator(Operator::Singleton)) {
+    fn operators(mut self, config: SetConfig) -> Self {
+        if matches!(self.entry, NodeType::Operator(Operator::Singleton) if config.singleton) {
             let var = self.get_free_var();
             let child = self.children.remove(0);
             let power_set = SyntaxNode {
@@ -181,8 +163,7 @@ impl SyntaxNode {
             let element = SyntaxNode {
                 entry: NodeType::Relation(Relation::Element),
                 children: vec![var.clone(), power_set],
-            }
-            .phi_power_set();
+            };
             let equality = SyntaxNode {
                 entry: NodeType::Relation(Relation::Equality),
                 children: vec![var, child],
@@ -190,40 +171,7 @@ impl SyntaxNode {
             self.entry = NodeType::Comprehension;
             self.children = vec![element, equality];
         }
-        self
-    }
 
-    fn comprehension(mut self, config: SetConfig) -> Self {
-        if !config.comprehension {
-            return self;
-        }
-        match self.entry {
-            NodeType::Relation(Relation::Equality) => {
-                if matches!(self.children[0].entry, NodeType::Comprehension) {
-                    self = self.phi_comprehension();
-                }
-                if matches!(self.children[1].entry, NodeType::Comprehension) {
-                    self.children.swap(0, 1);
-                    self = self.phi_comprehension();
-                }
-            }
-            NodeType::Relation(Relation::Element) => {
-                if matches!(self.children[1].entry, NodeType::Comprehension) {
-                    self = self.element_to_equality_right();
-                } else if matches!(self.children[0].entry, NodeType::Comprehension) {
-                    self = self.element_to_equality_left();
-                }
-            }
-            _ => (),
-        }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).comprehension(config);
-            self.children.push(child);
-        }
-        self
-    }
-
-    fn operators(mut self, config: SetConfig) -> Self {
         match self.entry {
             NodeType::Relation(Relation::Equality) => {
                 match self.children[0].entry {
@@ -251,6 +199,9 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
+                    NodeType::Comprehension => {
+                        self = self.phi_comprehension();
+                    }
                     _ => (),
                 }
                 match self.children[1].entry {
@@ -279,6 +230,10 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
+                    NodeType::Comprehension => {
+                        self.children.swap(0, 1);
+                        self = self.phi_comprehension();
+                    }
                     _ => (),
                 }
             }
@@ -308,6 +263,7 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
+                    NodeType::Comprehension => self = self.element_to_equality_right(),
                     _ => (),
                 }
                 match self.children[0].entry {
@@ -333,6 +289,7 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
+                    NodeType::Comprehension => self = self.element_to_equality_left(),
                     _ => (),
                 }
             }
@@ -414,90 +371,6 @@ impl SyntaxNode {
         self.entry = NodeType::Quantifier(Quantifier::Existential);
         self.children.push(var);
         self.children.push(conjunction);
-        self
-    }
-
-    fn phi_empty_set(mut self) -> Self {
-        let var = self.get_free_var();
-        let right = self.children.remove(1);
-        let element = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), right],
-        };
-        let quantifier = SyntaxNode {
-            entry: NodeType::Quantifier(Quantifier::Existential),
-            children: vec![var, element],
-        };
-        self.entry = NodeType::Connective(Connective::Negation);
-        self.children = vec![quantifier];
-        self
-    }
-
-    fn phi_comprehension(mut self) -> Self {
-        let right = self.children.remove(1);
-        let mut left = self.children.remove(0);
-        let phi = left.children.remove(1);
-        let mut spec = left.children.remove(0);
-        let var = spec.children.remove(0);
-        let element_left = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), right],
-        };
-        let element_right = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), spec.children.remove(0)],
-        };
-        let conjunction = SyntaxNode {
-            entry: NodeType::Connective(Connective::Conjunction),
-            children: vec![element_right, phi],
-        };
-        let biconditional = SyntaxNode {
-            entry: NodeType::Connective(Connective::Biconditional),
-            children: vec![element_left, conjunction],
-        };
-        self.entry = NodeType::Quantifier(Quantifier::Universal);
-        self.children.push(var);
-        self.children.push(biconditional);
-        self
-    }
-
-    fn phi_omega(mut self) -> Self {
-        let right = self.children.remove(1);
-        let var = self.get_free_var();
-        let empty_set = SyntaxNode {
-            entry: NodeType::Constant(Constant::EmptySet),
-            children: vec![],
-        };
-        let element_left = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![empty_set, right.clone()],
-        };
-        let element_middle = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![var.clone(), right.clone()],
-        };
-        let singleton = SyntaxNode {
-            entry: NodeType::Operator(Operator::Singleton),
-            children: vec![var.clone()],
-        };
-        let union = SyntaxNode {
-            entry: NodeType::Operator(Operator::Union),
-            children: vec![var.clone(), singleton],
-        };
-        let element_right = SyntaxNode {
-            entry: NodeType::Relation(Relation::Element),
-            children: vec![union, right],
-        };
-        let implication = SyntaxNode {
-            entry: NodeType::Connective(Connective::Implication),
-            children: vec![element_middle, element_right],
-        };
-        let quantifier = SyntaxNode {
-            entry: NodeType::Quantifier(Quantifier::Universal),
-            children: vec![var, implication],
-        };
-        self.entry = NodeType::Connective(Connective::Conjunction);
-        self.children = vec![element_left, quantifier];
         self
     }
 
@@ -652,6 +525,90 @@ impl SyntaxNode {
         self.entry = NodeType::Connective(Connective::Disjunction);
         self.children.push(equality_left);
         self.children.push(equality_right);
+        self
+    }
+
+    fn phi_comprehension(mut self) -> Self {
+        let right = self.children.remove(1);
+        let mut left = self.children.remove(0);
+        let phi = left.children.remove(1);
+        let mut spec = left.children.remove(0);
+        let var = spec.children.remove(0);
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right],
+        };
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), spec.children.remove(0)],
+        };
+        let conjunction = SyntaxNode {
+            entry: NodeType::Connective(Connective::Conjunction),
+            children: vec![element_right, phi],
+        };
+        let biconditional = SyntaxNode {
+            entry: NodeType::Connective(Connective::Biconditional),
+            children: vec![element_left, conjunction],
+        };
+        self.entry = NodeType::Quantifier(Quantifier::Universal);
+        self.children.push(var);
+        self.children.push(biconditional);
+        self
+    }
+
+    fn phi_empty_set(mut self) -> Self {
+        let var = self.get_free_var();
+        let right = self.children.remove(1);
+        let element = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right],
+        };
+        let quantifier = SyntaxNode {
+            entry: NodeType::Quantifier(Quantifier::Existential),
+            children: vec![var, element],
+        };
+        self.entry = NodeType::Connective(Connective::Negation);
+        self.children = vec![quantifier];
+        self
+    }
+
+    fn phi_omega(mut self) -> Self {
+        let right = self.children.remove(1);
+        let var = self.get_free_var();
+        let empty_set = SyntaxNode {
+            entry: NodeType::Constant(Constant::EmptySet),
+            children: vec![],
+        };
+        let element_left = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![empty_set, right.clone()],
+        };
+        let element_middle = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![var.clone(), right.clone()],
+        };
+        let singleton = SyntaxNode {
+            entry: NodeType::Operator(Operator::Singleton),
+            children: vec![var.clone()],
+        };
+        let union = SyntaxNode {
+            entry: NodeType::Operator(Operator::Union),
+            children: vec![var.clone(), singleton],
+        };
+        let element_right = SyntaxNode {
+            entry: NodeType::Relation(Relation::Element),
+            children: vec![union, right],
+        };
+        let implication = SyntaxNode {
+            entry: NodeType::Connective(Connective::Implication),
+            children: vec![element_middle, element_right],
+        };
+        let quantifier = SyntaxNode {
+            entry: NodeType::Quantifier(Quantifier::Universal),
+            children: vec![var, implication],
+        };
+        self.entry = NodeType::Connective(Connective::Conjunction);
+        self.children = vec![element_left, quantifier];
         self
     }
 
