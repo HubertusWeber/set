@@ -15,10 +15,10 @@ impl SyntaxNode {
         self.variables(config)
             .negated_relations(config)
             .subset(config)
-            .singleton(config)
             .comprehension(config)
             .operators(config)
             .constants(config)
+            .singleton(config)
     }
 
     fn variables(mut self, config: SetConfig) -> Self {
@@ -181,7 +181,8 @@ impl SyntaxNode {
             let element = SyntaxNode {
                 entry: NodeType::Relation(Relation::Element),
                 children: vec![var.clone(), power_set],
-            };
+            }
+            .phi_power_set();
             let equality = SyntaxNode {
                 entry: NodeType::Relation(Relation::Equality),
                 children: vec![var, child],
