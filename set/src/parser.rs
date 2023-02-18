@@ -70,7 +70,7 @@ pub enum Constant {
 pub fn parse(tokens: Vec<Token>) -> Result<SyntaxNode> {
     tokens
         .into_iter()
-        .map(|t| ParseItem::Token(t))
+        .map(ParseItem::Token)
         .collect::<Vec<ParseItem>>()
         .parse()
 }

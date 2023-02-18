@@ -13,25 +13,25 @@ impl fmt::Display for SyntaxNode {
                     || (v < u32::MAX - 96 && v > u32::MAX - 123)
                 {
                     let ascii = char::from_u32(u32::MAX - v).unwrap();
-                    write!(f, "{}", ascii)
+                    write!(f, "{ascii}")
                 } else {
                     let mut var = String::from("v");
                     for c in v.to_string().chars() {
                         match c {
-                            '0' => var.push_str("₀"),
-                            '1' => var.push_str("₁"),
-                            '2' => var.push_str("₂"),
-                            '3' => var.push_str("₃"),
-                            '4' => var.push_str("₄"),
-                            '5' => var.push_str("₅"),
-                            '6' => var.push_str("₆"),
-                            '7' => var.push_str("₇"),
-                            '8' => var.push_str("₈"),
-                            '9' => var.push_str("₉"),
+                            '0' => var.push('₀'),
+                            '1' => var.push('₁'),
+                            '2' => var.push('₂'),
+                            '3' => var.push('₃'),
+                            '4' => var.push('₄'),
+                            '5' => var.push('₅'),
+                            '6' => var.push('₆'),
+                            '7' => var.push('₇'),
+                            '8' => var.push('₈'),
+                            '9' => var.push('₉'),
                             _ => (),
                         }
                     }
-                    write!(f, "{}", var)
+                    write!(f, "{var}")
                 }
             }
             NodeType::Comprehension => write!(

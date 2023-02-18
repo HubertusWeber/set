@@ -72,26 +72,23 @@ impl SyntaxNode {
         if !config.subset {
             return self;
         }
-        match self.entry {
-            NodeType::Relation(Relation::Subset) => {
-                let var = self.get_free_var();
-                let antecedent = SyntaxNode {
-                    entry: NodeType::Relation(Relation::Element),
-                    children: vec![var.clone(), self.children.remove(0)],
-                };
-                let consequent = SyntaxNode {
-                    entry: NodeType::Relation(Relation::Element),
-                    children: vec![var.clone(), self.children.remove(0)],
-                };
-                let implication = SyntaxNode {
-                    entry: NodeType::Connective(Connective::Implication),
-                    children: vec![antecedent, consequent],
-                };
-                self.entry = NodeType::Quantifier(Quantifier::Universal);
-                self.children.push(var);
-                self.children.push(implication);
-            }
-            _ => (),
+        if matches!(self.entry, NodeType::Relation(Relation::Subset)) {
+            let var = self.get_free_var();
+            let antecedent = SyntaxNode {
+                entry: NodeType::Relation(Relation::Element),
+                children: vec![var.clone(), self.children.remove(0)],
+            };
+            let consequent = SyntaxNode {
+                entry: NodeType::Relation(Relation::Element),
+                children: vec![var.clone(), self.children.remove(0)],
+            };
+            let implication = SyntaxNode {
+                entry: NodeType::Connective(Connective::Implication),
+                children: vec![antecedent, consequent],
+            };
+            self.entry = NodeType::Quantifier(Quantifier::Universal);
+            self.children.push(var);
+            self.children.push(implication);
         }
         for _ in 0..self.children.len() {
             let child = self.children.remove(0).subset(config);
@@ -105,17 +102,17 @@ impl SyntaxNode {
             NodeType::Relation(Relation::Equality) => {
                 match self.children[1].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self.children.swap(0, 1)
+                        self.children.swap(0, 1);
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => self.children.swap(0, 1),
                     _ => (),
                 }
                 match self.children[0].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self = self.phi_empty_set()
+                        self = self.phi_empty_set();
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.phi_omega().operators(config)
+                        self = self.phi_omega().operators(config);
                     }
                     _ => (),
                 }
@@ -123,19 +120,19 @@ impl SyntaxNode {
             NodeType::Relation(Relation::Element) => {
                 match self.children[1].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self = self.element_to_equality_right()
+                        self = self.element_to_equality_right();
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.element_to_equality_right()
+                        self = self.element_to_equality_right();
                     }
                     _ => (),
                 }
                 match self.children[0].entry {
                     NodeType::Constant(Constant::EmptySet) if config.empty_set => {
-                        self = self.element_to_equality_left()
+                        self = self.element_to_equality_left();
                     }
                     NodeType::Constant(Constant::Omega) if config.omega => {
-                        self = self.element_to_equality_left()
+                        self = self.element_to_equality_left();
                     }
                     _ => (),
                 }
@@ -156,10 +153,10 @@ impl SyntaxNode {
                 match self.children[0].entry {
                     NodeType::Operator(o) => match o {
                         Operator::Singleton if config.singleton => {
-                            self = self.phi_singleton().operators(config)
+                            self = self.phi_singleton().operators(config);
                         }
                         Operator::PowerSet if config.power_set => {
-                            self = self.phi_power_set().subset(config)
+                            self = self.phi_power_set().subset(config);
                         }
                         Operator::BigIntersection if config.big_intersection => {
                             self = self.ext();
@@ -187,11 +184,11 @@ impl SyntaxNode {
                 match self.children[1].entry {
                     NodeType::Operator(o) => match o {
                         Operator::Singleton if config.singleton => {
-                            self = self.phi_singleton().operators(config)
+                            self = self.phi_singleton().operators(config);
                         }
                         Operator::PowerSet if config.power_set => {
                             self.children.swap(0, 1);
-                            self = self.phi_power_set().subset(config)
+                            self = self.phi_power_set().subset(config);
                         }
                         Operator::BigIntersection if config.big_intersection => {
                             self = self.ext();
@@ -215,7 +212,7 @@ impl SyntaxNode {
                     },
                     NodeType::Comprehension => {
                         self.children.swap(0, 1);
-                        self = self.phi_comprehension()
+                        self = self.phi_comprehension();
                     }
                     _ => (),
                 }
@@ -224,17 +221,17 @@ impl SyntaxNode {
                 match self.children[1].entry {
                     NodeType::Operator(o) => match o {
                         Operator::Singleton if config.singleton => {
-                            self = self.phi_singleton().operators(config)
+                            self = self.phi_singleton().operators(config);
                         }
                         Operator::PowerSet if config.power_set => {
-                            self = self.element_to_equality_right()
+                            self = self.element_to_equality_right();
                         }
                         Operator::BigIntersection if config.big_intersection => {
-                            self = self.phi_big_intersection()
+                            self = self.phi_big_intersection();
                         }
                         Operator::BigUnion if config.big_union => self = self.phi_big_union(),
                         Operator::Intersection if config.intersection => {
-                            self = self.phi_intersection()
+                            self = self.phi_intersection();
                         }
                         Operator::Difference if config.difference => self = self.phi_difference(),
                         Operator::Union if config.union => self = self.phi_union(),
@@ -247,26 +244,26 @@ impl SyntaxNode {
                 match self.children[0].entry {
                     NodeType::Operator(o) => match o {
                         Operator::Singleton if config.singleton => {
-                            self = self.phi_singleton().operators(config)
+                            self = self.phi_singleton().operators(config);
                         }
                         Operator::PowerSet if config.power_set => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         Operator::BigIntersection if config.big_intersection => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         Operator::BigUnion if config.big_union => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         Operator::Intersection if config.intersection => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         Operator::Difference if config.difference => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         Operator::Union if config.union => self = self.element_to_equality_left(),
                         Operator::PairSet if config.pair_set => {
-                            self = self.element_to_equality_left()
+                            self = self.element_to_equality_left();
                         }
                         _ => (),
                     },
@@ -641,7 +638,7 @@ impl SyntaxNode {
                 }
             }
             result.reverse();
-            return result;
+            result
         })
     }
 

@@ -13,8 +13,8 @@ pub struct SetUI {
 impl Default for SetUI {
     fn default() -> Self {
         Self {
-            input: "".into(),
-            output: "".into(),
+            input: String::new(),
+            output: String::new(),
             config: set::SetConfig {
                 variables: true,
                 empty_set: true,
@@ -49,7 +49,7 @@ impl SetUI {
             .insert(0, "m_plus".into());
         cc.egui_ctx.set_fonts(fonts);
 
-        Default::default()
+        SetUI::default()
     }
 }
 
@@ -114,7 +114,7 @@ impl eframe::App for SetUI {
 
             ui.vertical_centered(|ui| {
                 if ui.button("Transformieren").clicked() {
-                    *output = set::run(&input, *config);
+                    *output = set::run(input, *config);
                 }
 
                 egui::warn_if_debug_build(ui);
@@ -126,61 +126,61 @@ impl eframe::App for SetUI {
             .show(ctx, |ui| {
                 egui::Grid::new("symbols_grid").show(ui, |ui| {
                     if ui.button("∅").clicked() {
-                        input.push_str("∅");
+                        input.push('∅');
                     }
                     if ui.button("ω").clicked() {
-                        input.push_str("ω");
+                        input.push('ω');
                     }
                     if ui.button("¬").clicked() {
-                        input.push_str("¬");
+                        input.push('¬');
                     }
                     if ui.button("≠").clicked() {
-                        input.push_str("≠");
+                        input.push('≠');
                     }
 
                     ui.end_row();
 
                     if ui.button("∈").clicked() {
-                        input.push_str("∈");
+                        input.push('∈');
                     }
                     if ui.button("∉").clicked() {
-                        input.push_str("∉");
+                        input.push('∉');
                     }
                     if ui.button("⊆").clicked() {
-                        input.push_str("⊆");
+                        input.push('⊆');
                     }
                     if ui.button("⊈").clicked() {
-                        input.push_str("⊈");
+                        input.push('⊈');
                     }
 
                     ui.end_row();
 
                     if ui.button("∪").clicked() {
-                        input.push_str("∪");
+                        input.push('∪');
                     }
                     if ui.button("∩").clicked() {
-                        input.push_str("∩");
+                        input.push('∩');
                     }
                     if ui.button("∧").clicked() {
-                        input.push_str("∧");
+                        input.push('∧');
                     }
                     if ui.button("∨").clicked() {
-                        input.push_str("∨");
+                        input.push('∨');
                     }
 
                     ui.end_row();
 
                     if ui.button("∀").clicked() {
-                        input.push_str("∀");
+                        input.push('∀');
                     }
                     if ui.button("∃").clicked() {
-                        input.push_str("∃");
+                        input.push('∃');
                     }
                     if ui.button("→").clicked() {
-                        input.push_str("→");
+                        input.push('→');
                     }
                     if ui.button("↔").clicked() {
-                        input.push_str("↔");
+                        input.push('↔');
                     }
                 });
             });

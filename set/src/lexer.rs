@@ -12,7 +12,7 @@ pub enum Token {
     Const(String),
 }
 
-const REL: &'static [&'static str] = &[
+const REL: &[&str] = &[
     "=",
     "∈",
     "\\in",
@@ -26,7 +26,7 @@ const REL: &'static [&'static str] = &[
     "⊈",
     "\\nsubseteq",
 ];
-const CONN: &'static [&'static str] = &[
+const CONN: &[&str] = &[
     "¬",
     "∧",
     "∨",
@@ -43,12 +43,11 @@ const CONN: &'static [&'static str] = &[
     "\\rightarrow",
     "\\leftrightarrow",
 ];
-const BRACK: &'static [&'static str] = &["(", ")", "{", "}", "|", ","];
-const CONST: &'static [&'static str] = &["0", "∅", "\\emptyset", "ω", "\\omega"];
-const QUAN: &'static [&'static str] = &["∀", "∃", "\\forall", "\\exists"];
-const UNOP: &'static [&'static str] =
-    &["Pot", "Vereinigung", "\\bigcup", "Durchschnitt", "\\bigcap"];
-const BINOP: &'static [&'static str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
+const BRACK: &[&str] = &["(", ")", "{", "}", "|", ","];
+const CONST: &[&str] = &["0", "∅", "\\emptyset", "ω", "\\omega"];
+const QUAN: &[&str] = &["∀", "∃", "\\forall", "\\exists"];
+const UNOP: &[&str] = &["Pot", "Vereinigung", "\\bigcup", "Durchschnitt", "\\bigcap"];
+const BINOP: &[&str] = &["∪", "\\cup", "∩", "\\cap", "\\"];
 
 pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
     let mut result = vec![];
@@ -96,7 +95,7 @@ pub fn tokanize(mut input: String) -> Result<Vec<Token>> {
                 continue 'outer;
             }
         }
-        if input.chars().next().unwrap() == 'v' {
+        if input.starts_with('v') {
             let mut var_str: String = input.remove(0).into();
             while !input.is_empty() {
                 if input.chars().next().unwrap().is_numeric() {
