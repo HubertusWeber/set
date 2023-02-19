@@ -66,7 +66,7 @@ impl eframe::App for SetUI {
                 .spacing([40.0, 4.0])
                 .striped(true)
                 .show(ui, |ui| {
-                    ui.label("Eingabe");
+                    ui.label("Input");
                     ui.add(
                         egui::TextEdit::multiline(input)
                             .desired_width(f32::INFINITY)
@@ -76,29 +76,29 @@ impl eframe::App for SetUI {
                     )
                     .request_focus();
                     ui.end_row();
-                    ui.label("Optionen");
+                    ui.label("Eliminate");
                     egui::Grid::new("options_grid").show(ui, |ui| {
                         ui.checkbox(&mut config.negated_relations, "≠ ∉ ⊈");
-                        ui.checkbox(&mut config.subset, "Teilmenge");
-                        ui.checkbox(&mut config.comprehension, "Komprehension");
+                        ui.checkbox(&mut config.subset, "Subset");
+                        ui.checkbox(&mut config.comprehension, "Comprehension");
 
                         ui.end_row();
 
-                        ui.checkbox(&mut config.big_intersection, "gr. Durchschnitt");
-                        ui.checkbox(&mut config.big_union, "gr. Vereinigung");
-                        ui.checkbox(&mut config.power_set, "Potenzmenge");
+                        ui.checkbox(&mut config.big_intersection, "Big intersection");
+                        ui.checkbox(&mut config.big_union, "Big union");
+                        ui.checkbox(&mut config.power_set, "Power set");
 
                         ui.end_row();
 
-                        ui.checkbox(&mut config.intersection, "kl. Durchschnitt");
-                        ui.checkbox(&mut config.union, "kl. Vereinigung");
-                        ui.checkbox(&mut config.difference, "Differenz");
+                        ui.checkbox(&mut config.intersection, "Intersection");
+                        ui.checkbox(&mut config.union, "Union");
+                        ui.checkbox(&mut config.difference, "Difference");
 
                         ui.end_row();
 
-                        ui.checkbox(&mut config.singleton, "Einermenge");
-                        ui.checkbox(&mut config.pair_set, "Paarmenge");
-                        ui.checkbox(&mut config.variables, "Variablen");
+                        ui.checkbox(&mut config.singleton, "Singleton");
+                        ui.checkbox(&mut config.pair_set, "Pair");
+                        ui.checkbox(&mut config.variables, "Variables");
 
                         ui.end_row();
 
@@ -106,14 +106,14 @@ impl eframe::App for SetUI {
                         ui.checkbox(&mut config.omega, "ω");
                     });
                     ui.end_row();
-                    ui.label("Ausgabe");
+                    ui.label("Output");
                     ui.add(egui::Label::new(RichText::new(output.clone()).strong()).wrap(true));
                 });
 
             ui.separator();
 
             ui.vertical_centered(|ui| {
-                if ui.button("Transformieren").clicked() {
+                if ui.button("Transform").clicked() {
                     *output = set::run(input, *config);
                 }
 
@@ -121,7 +121,7 @@ impl eframe::App for SetUI {
             });
         });
 
-        egui::Window::new("Symbole")
+        egui::Window::new("Symbols")
             .default_open(false)
             .show(ctx, |ui| {
                 egui::Grid::new("symbols_grid").show(ui, |ui| {
