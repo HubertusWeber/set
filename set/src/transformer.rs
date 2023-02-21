@@ -49,6 +49,10 @@ impl SyntaxNode {
         if !config.negated_relations {
             return self;
         }
+        for _ in 0..self.children.len() {
+            let child = self.children.remove(0).negated_relations(config);
+            self.children.push(child);
+        }
         if let NodeType::Relation(r) = self.entry {
             let entry = match r {
                 Relation::NotEqual => NodeType::Relation(Relation::Equality),
@@ -60,10 +64,6 @@ impl SyntaxNode {
             let child = SyntaxNode { entry, children };
             self.entry = NodeType::Connective(Connective::Negation);
             self.children = vec![child];
-        }
-        for _ in 0..self.children.len() {
-            let child = self.children.remove(0).negated_relations(config);
-            self.children.push(child);
         }
         self
     }
