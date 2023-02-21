@@ -178,7 +178,9 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
-                    NodeType::Comprehension => self = self.phi_comprehension(),
+                    NodeType::Comprehension if config.comprehension => {
+                        self = self.phi_comprehension()
+                    }
                     _ => (),
                 }
                 match self.children[1].entry {
@@ -210,7 +212,7 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
-                    NodeType::Comprehension => {
+                    NodeType::Comprehension if config.comprehension => {
                         self.children.swap(0, 1);
                         self = self.phi_comprehension();
                     }
@@ -238,7 +240,9 @@ impl SyntaxNode {
                         Operator::PairSet if config.pair_set => self = self.phi_pair_set(),
                         _ => (),
                     },
-                    NodeType::Comprehension => self = self.element_to_equality_right(),
+                    NodeType::Comprehension if config.comprehension => {
+                        self = self.element_to_equality_right()
+                    }
                     _ => (),
                 }
                 match self.children[0].entry {
@@ -267,7 +271,9 @@ impl SyntaxNode {
                         }
                         _ => (),
                     },
-                    NodeType::Comprehension => self = self.element_to_equality_left(),
+                    NodeType::Comprehension if config.comprehension => {
+                        self = self.element_to_equality_left()
+                    }
                     _ => (),
                 }
             }
